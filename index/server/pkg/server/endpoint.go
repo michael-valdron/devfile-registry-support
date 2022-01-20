@@ -136,6 +136,12 @@ func serveDevfile(c *gin.Context) {
 	})
 }
 
+// serveDevfileStarterProject returns the starter project content for the devfile
+func serveDevfileStarterProject(c *gin.Context) {
+	devfileName := c.Param("name")
+	starterProjectName := c.Param("project")
+}
+
 func serveUI(c *gin.Context) {
 	remote, err := url.Parse(scheme + "://" + viewerService + "/viewer/")
 	if err != nil {
