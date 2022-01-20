@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/devfile/registry-support/index/server/pkg/util"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/devfile/registry-support/index/server/pkg/util"
 
 	"github.com/prometheus/client_golang/prometheus"
 
