@@ -138,8 +138,8 @@ func serveDevfile(c *gin.Context) {
 
 // serveDevfileStarterProject returns the starter project content for the devfile
 func serveDevfileStarterProject(c *gin.Context) {
-	devfileName := c.Param("name")
-	starterProjectName := c.Param("project")
+	devfileName := c.Param("devfileName")
+	starterProjectName := c.Param("starterProjectName")
 }
 
 func serveUI(c *gin.Context) {

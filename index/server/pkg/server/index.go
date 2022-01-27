@@ -131,7 +131,7 @@ func ServeRegistry() {
 	router.GET("/index/:type", serveDevfileIndexWithType)
 	router.GET("/health", serveHealthCheck)
 	router.GET("/devfiles/:name", serveDevfile)
-	router.GET("/devfiles/:name/projects/:project", serveDevfileStarterProject)
+	router.GET("/devfiles/:devfileName/starterProjects/:starterProjectName", serveDevfileStarterProject)
 
 	// Set up a simple proxy for /v2 endpoints
 	// Only allow HEAD and GET requests
