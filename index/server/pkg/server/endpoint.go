@@ -146,16 +146,17 @@ func serveDevfileStarterProject(c *gin.Context) {
 		var index []indexSchema.Schema
 		bytes, err := ioutil.ReadFile(indexPath)
 		if err != nil {
-			return nil, err
+			return bytes, err
 		}
 		err = json.Unmarshal(bytes, &index)
 		if err != nil {
-			return nil, err
+			return make([]byte, 0), err
 		}
 
+		// Reuse 'bytes' for devfile bytes
+		bytes = make([]byte, 0)
 		for _, devfileIndex := range index {
 			if devfileIndex.Name == devfileName {
-				var bytes []byte
 				if devfileIndex.Type == indexSchema.StackDevfileType {
 					bytes, err = pullStackFromRegistry(devfileIndex)
 				} else {
@@ -166,11 +167,11 @@ func serveDevfileStarterProject(c *gin.Context) {
 					}
 				}
 
-				return bytes, err
+				break
 			}
 		}
 
-		return nil, nil
+		return bytes, err
 	}(devfileName)
 	if err != nil {
 		log.Print(err.Error())
@@ -195,7 +196,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 	// 			"error":  err.Error(),
 	// 			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
 	// 		})
-	// 		return nil
+	// 		return make([]byte, 0)
 	// 	}
 	// 	err = json.Unmarshal(bytes, &index)
 	// 	if err != nil {
@@ -204,8 +205,11 @@ func serveDevfileStarterProject(c *gin.Context) {
 	// 			"error":  err.Error(),
 	// 			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
 	// 		})
-	// 		return nil
+	// 		return make([]byte, 0)
 	// 	}
+	//
+	//  // Reuse 'bytes' for devfile bytes
+	// 	bytes = make([]byte, 0)
 	// 	for _, devfileIndex := range index {
 	// 		if devfileIndex.Name == devfileName {
 	// 			var bytes []byte
@@ -224,7 +228,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 	// 					"error":  err.Error(),
 	// 					"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
 	// 				})
-	// 				return nil
+	// 				return make([]byte, 0)
 	// 			}
 
 	// 			return bytes
@@ -235,7 +239,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 	// 		"status": fmt.Sprintf("the devfile of %s didn't exist", devfileName),
 	// 	})
 
-	// 	return nil
+	// 	return bytes
 	// }(c, devfileName)
 
 	/****/
