@@ -143,7 +143,6 @@ func serveDevfile(c *gin.Context) {
 func serveDevfileStarterProject(c *gin.Context) {
 	devfileName := c.Param("devfileName")
 	starterProjectName := c.Param("starterProjectName")
-<<<<<<< HEAD
 	devfileBytes, devfileIndexSchema := fetchDevfile(c, devfileName)
 
 	if len(devfileBytes) == 0 {
@@ -187,15 +186,6 @@ func serveDevfileStarterProject(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"status": fmt.Sprintf("the starter project named %s does not exist in the devfile of %s", starterProjectName, devfileName),
 		})
-=======
-	devfileBytes := fetchDevfile(c, devfileName)
-
-	if len(devfileBytes) == 0 {
-		// fetchDevfile was unsuccessful (error or not found)
-		return
-	} else {
-		// TODO: Add fetch start project and set response source.
->>>>>>> 2bb8eb9... Implementation 2 for fetchDevfile chosen and added. See Issue #720 discussion at: https://github.com/devfile/api/issues/720
 	}
 }
 
@@ -322,11 +312,7 @@ func buildIndexAPIResponse(c *gin.Context) {
 }
 
 // fetchDevfile retrieves a specified devfile stored under /registry/**/<devfileName>
-<<<<<<< HEAD
 func fetchDevfile(c *gin.Context, devfileName string) ([]byte, indexSchema.Schema) {
-=======
-func fetchDevfile(c *gin.Context, devfileName string) []byte {
->>>>>>> 2bb8eb9... Implementation 2 for fetchDevfile chosen and added. See Issue #720 discussion at: https://github.com/devfile/api/issues/720
 	var index []indexSchema.Schema
 	bytes, err := ioutil.ReadFile(indexPath)
 	if err != nil {
@@ -335,11 +321,7 @@ func fetchDevfile(c *gin.Context, devfileName string) []byte {
 			"error":  err.Error(),
 			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
 		})
-<<<<<<< HEAD
 		return make([]byte, 0), indexSchema.Schema{}
-=======
-		return make([]byte, 0)
->>>>>>> 2bb8eb9... Implementation 2 for fetchDevfile chosen and added. See Issue #720 discussion at: https://github.com/devfile/api/issues/720
 	}
 	err = json.Unmarshal(bytes, &index)
 	if err != nil {
@@ -348,11 +330,7 @@ func fetchDevfile(c *gin.Context, devfileName string) []byte {
 			"error":  err.Error(),
 			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
 		})
-<<<<<<< HEAD
 		return make([]byte, 0), indexSchema.Schema{}
-=======
-		return make([]byte, 0)
->>>>>>> 2bb8eb9... Implementation 2 for fetchDevfile chosen and added. See Issue #720 discussion at: https://github.com/devfile/api/issues/720
 	}
 
 	// Reuse 'bytes' for devfile bytes, assign empty
@@ -375,17 +353,10 @@ func fetchDevfile(c *gin.Context, devfileName string) []byte {
 					"error":  err.Error(),
 					"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
 				})
-<<<<<<< HEAD
 				return make([]byte, 0), devfileIndex
 			}
 
 			return bytes, devfileIndex
-=======
-				return make([]byte, 0)
-			}
-
-			return bytes
->>>>>>> 2bb8eb9... Implementation 2 for fetchDevfile chosen and added. See Issue #720 discussion at: https://github.com/devfile/api/issues/720
 		}
 	}
 
@@ -393,11 +364,7 @@ func fetchDevfile(c *gin.Context, devfileName string) []byte {
 		"status": fmt.Sprintf("the devfile of %s didn't exist", devfileName),
 	})
 
-<<<<<<< HEAD
 	return bytes, indexSchema.Schema{}
-=======
-	return bytes
->>>>>>> 2bb8eb9... Implementation 2 for fetchDevfile chosen and added. See Issue #720 discussion at: https://github.com/devfile/api/issues/720
 }
 
 /** source from serveDevfile **/
