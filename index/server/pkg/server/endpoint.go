@@ -140,109 +140,14 @@ func serveDevfile(c *gin.Context) {
 func serveDevfileStarterProject(c *gin.Context) {
 	devfileName := c.Param("devfileName")
 	starterProjectName := c.Param("starterProjectName")
+	devfileBytes := fetchDevfile(c, devfileName)
 
-	/** source from serveDevfile **/
-	devfileBytes, err := func(devfileName string) ([]byte, error) {
-		var index []indexSchema.Schema
-		bytes, err := ioutil.ReadFile(indexPath)
-		if err != nil {
-			return bytes, err
-		}
-		err = json.Unmarshal(bytes, &index)
-		if err != nil {
-			return make([]byte, 0), err
-		}
-
-		// Reuse 'bytes' for devfile bytes
-		bytes = make([]byte, 0)
-		for _, devfileIndex := range index {
-			if devfileIndex.Name == devfileName {
-				if devfileIndex.Type == indexSchema.StackDevfileType {
-					bytes, err = pullStackFromRegistry(devfileIndex)
-				} else {
-					// Retrieve the sample devfile stored under /registry/samples/<devfile>
-					sampleDevfilePath := path.Join(samplesPath, devfileIndex.Name, devfileName)
-					if _, err = os.Stat(sampleDevfilePath); err == nil {
-						bytes, err = ioutil.ReadFile(sampleDevfilePath)
-					}
-				}
-
-				break
-			}
-		}
-
-		return bytes, err
-	}(devfileName)
-	if err != nil {
-		log.Print(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":  err.Error(),
-			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
-		})
+	if len(devfileBytes) == 0 {
+		// fetchDevfile was unsuccessful (error or not found)
 		return
-	} else if err == nil && devfileBytes == nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status": fmt.Sprintf("the devfile of %s didn't exist", devfileName),
-		})
-		return
+	} else {
+		// TODO: Add fetch start project and set response source.
 	}
-
-	// devfileBytes := func(c *gin.Context, devfileName string) []byte {
-	// 	var index []indexSchema.Schema
-	// 	bytes, err := ioutil.ReadFile(indexPath)
-	// 	if err != nil {
-	// 		log.Print(err.Error())
-	// 		c.JSON(http.StatusInternalServerError, gin.H{
-	// 			"error":  err.Error(),
-	// 			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
-	// 		})
-	// 		return make([]byte, 0)
-	// 	}
-	// 	err = json.Unmarshal(bytes, &index)
-	// 	if err != nil {
-	// 		log.Print(err.Error())
-	// 		c.JSON(http.StatusInternalServerError, gin.H{
-	// 			"error":  err.Error(),
-	// 			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
-	// 		})
-	// 		return make([]byte, 0)
-	// 	}
-	//
-	//  // Reuse 'bytes' for devfile bytes
-	// 	bytes = make([]byte, 0)
-	// 	for _, devfileIndex := range index {
-	// 		if devfileIndex.Name == devfileName {
-	// 			var bytes []byte
-	// 			if devfileIndex.Type == indexSchema.StackDevfileType {
-	// 				bytes, err = pullStackFromRegistry(devfileIndex)
-	// 			} else {
-	// 				// Retrieve the sample devfile stored under /registry/samples/<devfile>
-	// 				sampleDevfilePath := path.Join(samplesPath, devfileIndex.Name, devfileName)
-	// 				if _, err = os.Stat(sampleDevfilePath); err == nil {
-	// 					bytes, err = ioutil.ReadFile(sampleDevfilePath)
-	// 				}
-	// 			}
-	// 			if err != nil {
-	// 				log.Print(err.Error())
-	// 				c.JSON(http.StatusInternalServerError, gin.H{
-	// 					"error":  err.Error(),
-	// 					"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
-	// 				})
-	// 				return make([]byte, 0)
-	// 			}
-
-	// 			return bytes
-	// 		}
-	// 	}
-
-	// 	c.JSON(http.StatusNotFound, gin.H{
-	// 		"status": fmt.Sprintf("the devfile of %s didn't exist", devfileName),
-	// 	})
-
-	// 	return bytes
-	// }(c, devfileName)
-
-	/****/
 }
 
 func serveUI(c *gin.Context) {
@@ -366,3 +271,93 @@ func buildIndexAPIResponse(c *gin.Context) {
 		}
 	}
 }
+
+// fetchDevfile retrieves a specified devfile stored under /registry/**/<devfileName>
+func fetchDevfile(c *gin.Context, devfileName string) []byte {
+	var index []indexSchema.Schema
+	bytes, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		log.Print(err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  err.Error(),
+			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
+		})
+		return make([]byte, 0)
+	}
+	err = json.Unmarshal(bytes, &index)
+	if err != nil {
+		log.Print(err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":  err.Error(),
+			"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
+		})
+		return make([]byte, 0)
+	}
+
+	// Reuse 'bytes' for devfile bytes, assign empty
+	bytes = make([]byte, 0)
+	for _, devfileIndex := range index {
+		if devfileIndex.Name == devfileName {
+			var bytes []byte
+			if devfileIndex.Type == indexSchema.StackDevfileType {
+				bytes, err = pullStackFromRegistry(devfileIndex)
+			} else {
+				// Retrieve the sample devfile stored under /registry/samples/<devfile>
+				sampleDevfilePath := path.Join(samplesPath, devfileIndex.Name, devfileName)
+				if _, err = os.Stat(sampleDevfilePath); err == nil {
+					bytes, err = ioutil.ReadFile(sampleDevfilePath)
+				}
+			}
+			if err != nil {
+				log.Print(err.Error())
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error":  err.Error(),
+					"status": fmt.Sprintf("failed to pull the devfile of %s", devfileName),
+				})
+				return make([]byte, 0)
+			}
+
+			return bytes
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{
+		"status": fmt.Sprintf("the devfile of %s didn't exist", devfileName),
+	})
+
+	return bytes
+}
+
+/** source from serveDevfile **/
+// func fetchDevfile(devfileName string) ([]byte, error) {
+// 	var index []indexSchema.Schema
+// 	bytes, err := ioutil.ReadFile(indexPath)
+// 	if err != nil {
+// 		return bytes, err
+// 	}
+// 	err = json.Unmarshal(bytes, &index)
+// 	if err != nil {
+// 		return make([]byte, 0), err
+// 	}
+
+// 	// Reuse 'bytes' for devfile bytes
+// 	bytes = make([]byte, 0)
+// 	for _, devfileIndex := range index {
+// 		if devfileIndex.Name == devfileName {
+// 			if devfileIndex.Type == indexSchema.StackDevfileType {
+// 				bytes, err = pullStackFromRegistry(devfileIndex)
+// 			} else {
+// 				// Retrieve the sample devfile stored under /registry/samples/<devfile>
+// 				sampleDevfilePath := path.Join(samplesPath, devfileIndex.Name, devfileName)
+// 				if _, err = os.Stat(sampleDevfilePath); err == nil {
+// 					bytes, err = ioutil.ReadFile(sampleDevfilePath)
+// 				}
+// 			}
+
+// 			break
+// 		}
+// 	}
+
+// 	return bytes, err
+// }
+/****/
