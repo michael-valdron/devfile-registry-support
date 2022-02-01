@@ -150,6 +150,10 @@ func serveDevfileStarterProject(c *gin.Context) {
 		return
 	} else {
 		content, err := parser.ParseFromData(devfileBytes)
+		filterOptions := common.DevfileOptions{}
+		// filterOptions := common.DevfileOptions{
+		// 	FilterByName: starterProjectName,
+		// }
 		var starterProjects []v1alpha2.StarterProject
 
 		if err != nil {
@@ -159,9 +163,8 @@ func serveDevfileStarterProject(c *gin.Context) {
 				"status": fmt.Sprintf("failed to parse the devfile of %s", devfileName),
 			})
 		}
-		starterProjects, err = content.Data.GetStarterProjects(common.DevfileOptions{
-			FilterByName: starterProjectName,
-		})
+		starterProjects, err = content.Data.GetStarterProjects(filterOptions)
+
 		if err != nil {
 			log.Print(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -169,8 +172,20 @@ func serveDevfileStarterProject(c *gin.Context) {
 				"status": fmt.Sprintf("problem in reading starter project %s of devfile %s", starterProjectName, devfileName),
 			})
 		}
+		// ** Temp Filter **
+		for _, starterProject := range starterProjects {
+			if starterProject.Name == starterProjectName {
+				// TODO: Add fetch start project and set response source.
 
-		// TODO: Add fetch start project and set response source.
+				c.JSON(http.StatusAccepted, gin.H{})
+				return
+			}
+		}
+		// *****************
+
+		c.JSON(http.StatusNotFound, gin.H{
+			"status": fmt.Sprintf("the starter project named %s does not exist in the devfile of %s", starterProjectName, devfileName),
+		})
 	}
 }
 
