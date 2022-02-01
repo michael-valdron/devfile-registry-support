@@ -11,6 +11,9 @@ import (
 	"os"
 	"path"
 
+	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/library/pkg/devfile/parser"
+	"github.com/devfile/library/pkg/devfile/parser/data/v2/common"
 	indexSchema "github.com/devfile/registry-support/index/generator/schema"
 	"github.com/devfile/registry-support/index/server/pkg/util"
 	"github.com/gin-gonic/gin"
@@ -146,6 +149,27 @@ func serveDevfileStarterProject(c *gin.Context) {
 		// fetchDevfile was unsuccessful (error or not found)
 		return
 	} else {
+		content, err := parser.ParseFromData(devfileBytes)
+		var starterProjects []v1alpha2.StarterProject
+
+		if err != nil {
+			log.Print(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  err.Error(),
+				"status": fmt.Sprintf("failed to parse the devfile of %s", devfileName),
+			})
+		}
+		starterProjects, err = content.Data.GetStarterProjects(common.DevfileOptions{
+			FilterByName: starterProjectName,
+		})
+		if err != nil {
+			log.Print(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":  err.Error(),
+				"status": fmt.Sprintf("problem in reading starter project %s of devfile %s", starterProjectName, devfileName),
+			})
+		}
+
 		// TODO: Add fetch start project and set response source.
 	}
 }
