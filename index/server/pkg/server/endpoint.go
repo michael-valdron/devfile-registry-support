@@ -141,7 +141,7 @@ func serveDevfile(c *gin.Context) {
 
 // serveDevfileStarterProject returns the starter project content for the devfile
 func serveDevfileStarterProject(c *gin.Context) {
-	devfileName := c.Param("devfileName")
+	devfileName := c.Param("name")
 	starterProjectName := c.Param("starterProjectName")
 	devfileBytes, devfileIndexSchema := fetchDevfile(c, devfileName)
 
@@ -176,6 +176,17 @@ func serveDevfileStarterProject(c *gin.Context) {
 		for _, starterProject := range starterProjects {
 			if starterProject.Name == starterProjectName {
 				// TODO: Add fetch start project and set response source.
+
+				if starterProject.Git != nil {
+					// TODO: Add fetch starter project zip from git repository source.
+				} else if starterProject.Zip != nil {
+					// TODO: Add fetch starter project zip from url source.
+				} else {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"status": fmt.Sprintf("Starter project %s has no source to download from", starterProjectName),
+					})
+					return
+				}
 
 				c.JSON(http.StatusAccepted, gin.H{})
 				return
