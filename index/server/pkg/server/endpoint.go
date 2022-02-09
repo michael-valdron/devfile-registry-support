@@ -162,6 +162,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 				"error":  err.Error(),
 				"status": fmt.Sprintf("failed to parse the devfile of %s", devfileName),
 			})
+			return
 		}
 		starterProjects, err = content.Data.GetStarterProjects(filterOptions)
 
@@ -171,6 +172,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 				"error":  err.Error(),
 				"status": fmt.Sprintf("problem in reading starter project %s of devfile %s", starterProjectName, devfileName),
 			})
+			return
 		}
 		// ** Temp Filter **
 		for _, starterProject := range starterProjects {
