@@ -493,37 +493,3 @@ func fetchDevfile(c *gin.Context, devfileName string) ([]byte, indexSchema.Schem
 
 	return bytes, indexSchema.Schema{}
 }
-
-/** source from serveDevfile **/
-// func fetchDevfile(devfileName string) ([]byte, error) {
-// 	var index []indexSchema.Schema
-// 	bytes, err := ioutil.ReadFile(indexPath)
-// 	if err != nil {
-// 		return bytes, err
-// 	}
-// 	err = json.Unmarshal(bytes, &index)
-// 	if err != nil {
-// 		return make([]byte, 0), err
-// 	}
-
-// 	// Reuse 'bytes' for devfile bytes
-// 	bytes = make([]byte, 0)
-// 	for _, devfileIndex := range index {
-// 		if devfileIndex.Name == devfileName {
-// 			if devfileIndex.Type == indexSchema.StackDevfileType {
-// 				bytes, err = pullStackFromRegistry(devfileIndex)
-// 			} else {
-// 				// Retrieve the sample devfile stored under /registry/samples/<devfile>
-// 				sampleDevfilePath := path.Join(samplesPath, devfileIndex.Name, devfileName)
-// 				if _, err = os.Stat(sampleDevfilePath); err == nil {
-// 					bytes, err = ioutil.ReadFile(sampleDevfilePath)
-// 				}
-// 			}
-
-// 			break
-// 		}
-// 	}
-
-// 	return bytes, err
-// }
-/****/
