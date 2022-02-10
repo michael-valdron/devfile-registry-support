@@ -1,8 +1,12 @@
 package server
 
 import (
+	"archive/zip"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +14,8 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/library/pkg/devfile/parser"
@@ -17,6 +23,7 @@ import (
 	indexSchema "github.com/devfile/registry-support/index/generator/schema"
 	"github.com/devfile/registry-support/index/server/pkg/util"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/go-getter"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/segmentio/analytics-go.v3"
 )
@@ -177,12 +184,119 @@ func serveDevfileStarterProject(c *gin.Context) {
 		// ** Temp Filter **
 		for _, starterProject := range starterProjects {
 			if starterProject.Name == starterProjectName {
-				// TODO: Add fetch start project and set response source.
+				var downloadBytes []byte
 
 				if starterProject.Git != nil {
-					// TODO: Add fetch starter project zip from git repository source.
+					downloadTmpLoc := path.Join("/tmp", starterProjectName)
+					// TODO: Setup go-getter to download subDir and from other remotes
+					client := &getter.Client{
+						Ctx:  context.Background(),
+						Dst:  downloadTmpLoc,
+						Dir:  true,
+						Src:  starterProject.Git.Remotes["origin"],
+						Mode: getter.ClientModeDir,
+						Detectors: []getter.Detector{
+							&getter.GitHubDetector{},
+						},
+						Getters: map[string]getter.Getter{
+							"git": &getter.GitGetter{},
+						},
+					}
+					if err := client.Get(); err != nil {
+						log.Print(err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error": err.Error(),
+							"status": fmt.Sprintf("Problem with downloading starter project %s from location: %s",
+								starterProjectName, client.Src),
+						})
+						return
+					}
+
+					zipFile, err := os.Create(fmt.Sprintf("%s.zip", downloadTmpLoc))
+					if err != nil {
+						log.Print(err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error": err.Error(),
+							"status": fmt.Sprintf("Problem with creating starter project %s zip archive for download",
+								starterProjectName),
+						})
+						return
+					}
+					defer zipFile.Close()
+
+					zipWriter := zip.NewWriter(zipFile)
+					defer zipWriter.Close()
+
+					err = filepath.Walk(downloadTmpLoc, func(currPath string, info fs.FileInfo, err error) error {
+						if err != nil {
+							return err
+						} else if !info.IsDir() {
+							srcFile, err := os.Open(currPath)
+							if err != nil {
+								return err
+							}
+							defer srcFile.Close()
+
+							dstFile, err := zipWriter.Create(path.Join(".", strings.Split(currPath, downloadTmpLoc)[1]))
+							if err != nil {
+								return err
+							}
+
+							if _, err := io.Copy(dstFile, srcFile); err != nil {
+								return err
+							}
+						}
+
+						return nil
+					})
+					if err != nil {
+						log.Print(err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error": err.Error(),
+							"status": fmt.Sprintf("Problem with populating starter project %s zip archive for download, see error for details",
+								starterProjectName),
+						})
+						return
+					}
+
+					_, err = zipFile.Read(downloadBytes)
+					if err != nil {
+						log.Print(err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error": err.Error(),
+							"status": fmt.Sprintf("Problem with reading starter project %s zip archive for download",
+								starterProjectName),
+						})
+						return
+					}
 				} else if starterProject.Zip != nil {
-					// TODO: Add fetch starter project zip from url source.
+					client := http.Client{
+						CheckRedirect: func(req *http.Request, via []*http.Request) error {
+							req.URL.Opaque = req.URL.Path
+							return nil
+						},
+					}
+
+					resp, err := client.Get(starterProject.Zip.Location)
+					if err != nil {
+						log.Print(err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error": err.Error(),
+							"status": fmt.Sprintf("Problem with downloading starter project %s from location: %s",
+								starterProjectName, starterProject.Zip.Location),
+						})
+						return
+					}
+					defer resp.Body.Close()
+
+					if _, err = resp.Body.Read(downloadBytes); err != nil {
+						log.Print(err.Error())
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error":  err.Error(),
+							"status": fmt.Sprintf("Problem with reading downloaded starter %s", starterProjectName),
+						})
+						return
+					}
 				} else {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"status": fmt.Sprintf("Starter project %s has no source to download from", starterProjectName),
@@ -190,7 +304,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 					return
 				}
 
-				c.JSON(http.StatusAccepted, gin.H{})
+				c.Data(http.StatusAccepted, http.DetectContentType(downloadBytes), downloadBytes)
 				return
 			}
 		}
