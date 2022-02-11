@@ -289,7 +289,8 @@ func serveDevfileStarterProject(c *gin.Context) {
 					}
 					defer resp.Body.Close()
 
-					if _, err = resp.Body.Read(downloadBytes); err != nil {
+					downloadBytes, err = ioutil.ReadAll(resp.Body)
+					if err != nil {
 						log.Print(err.Error())
 						c.JSON(http.StatusInternalServerError, gin.H{
 							"error":  err.Error(),
@@ -304,7 +305,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 					return
 				}
 
-				c.Data(http.StatusAccepted, http.DetectContentType(downloadBytes), downloadBytes)
+				c.Data(http.StatusAccepted, "application/zip", downloadBytes)
 				return
 			}
 		}
