@@ -193,7 +193,7 @@ func serveDevfileStarterProject(c *gin.Context) {
 						Ctx:  context.Background(),
 						Dst:  downloadTmpLoc,
 						Dir:  true,
-						Src:  starterProject.Git.Remotes["origin"],
+						Src:  strings.Split(starterProject.Git.Remotes["origin"], "https://")[1],
 						Mode: getter.ClientModeDir,
 						Detectors: []getter.Detector{
 							&getter.GitHubDetector{},
