@@ -41,7 +41,7 @@ const JsonSchema220 = `{
         ],
         "properties": {
           "apply": {
-            "description": "Command that consists in applying a given component definition, typically bound to a devworkspace event.\n\nFor example, when an 'apply' command is bound to a 'preStart' event, and references a 'container' component, it will start the container as a K8S initContainer in the devworkspace POD, unless the component has its 'dedicatedPod' field set to 'true'.\n\nWhen no 'apply' command exist for a given component, it is assumed the component will be applied at devworkspace start by default.",
+            "description": "Command that consists in applying a given component definition, typically bound to a devworkspace event.\n\nFor example, when an 'apply' command is bound to a 'preStart' event, and references a 'container' component, it will start the container as a K8S initContainer in the devworkspace POD, unless the component has its 'dedicatedPod' field set to 'true'.\n\nWhen no 'apply' command exist for a given component, it is assumed the component will be applied at devworkspace start by default, unless 'deployByDefault' for that component is set to false.",
             "type": "object",
             "required": [
               "component"
@@ -69,7 +69,8 @@ const JsonSchema220 = `{
                       "build",
                       "run",
                       "test",
-                      "debug"
+                      "debug",
+                      "deploy"
                     ]
                   }
                 },
@@ -116,7 +117,8 @@ const JsonSchema220 = `{
                       "build",
                       "run",
                       "test",
-                      "debug"
+                      "debug",
+                      "deploy"
                     ]
                   }
                 },
@@ -187,7 +189,8 @@ const JsonSchema220 = `{
                       "build",
                       "run",
                       "test",
-                      "debug"
+                      "debug",
+                      "deploy"
                     ]
                   }
                 },
@@ -246,6 +249,11 @@ const JsonSchema220 = `{
             "required": [
               "volume"
             ]
+          },
+          {
+            "required": [
+              "image"
+            ]
           }
         ],
         "properties": {
@@ -261,6 +269,27 @@ const JsonSchema220 = `{
               "image"
             ],
             "properties": {
+              "annotation": {
+                "description": "Annotations that should be added to specific resources for this container",
+                "type": "object",
+                "properties": {
+                  "deployment": {
+                    "description": "Annotations to be added to deployment",
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "service": {
+                    "description": "Annotations to be added to service",
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
               "args": {
                 "description": "The arguments to supply to the command running the dockerimage component. The arguments are supplied either to the default command provided in the image or to the overridden command.\n\nDefaults to an empty array, meaning use whatever is defined in the image.",
                 "type": "array",
@@ -294,6 +323,13 @@ const JsonSchema220 = `{
                     "targetPort"
                   ],
                   "properties": {
+                    "annotation": {
+                      "description": "Annotations to be added to Kubernetes Ingress or Openshift Route",
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "attributes": {
                       "description": "Map of implementation-dependant string-based free-form attributes.\n\nExamples of Che-specific attributes:\n- cookiesAuthEnabled: \"true\" / \"false\",\n- type: \"terminal\" / \"ide\" / \"ide-dev\",",
                       "type": "object",
@@ -311,7 +347,7 @@ const JsonSchema220 = `{
                     },
                     "name": {
                       "type": "string",
-                      "maxLength": 63,
+                      "maxLength": 15,
                       "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
                     },
                     "path": {
@@ -336,6 +372,7 @@ const JsonSchema220 = `{
                       "type": "boolean"
                     },
                     "targetPort": {
+                      "description": "The port number should be unique.",
                       "type": "integer"
                     }
                   },
@@ -407,6 +444,128 @@ const JsonSchema220 = `{
             },
             "additionalProperties": false
           },
+          "image": {
+            "description": "Allows specifying the definition of an image for outer loop builds",
+            "type": "object",
+            "required": [
+              "imageName"
+            ],
+            "oneOf": [
+              {
+                "required": [
+                  "dockerfile"
+                ]
+              }
+            ],
+            "properties": {
+              "autoBuild": {
+                "description": "Defines if the image should be built during startup.\n\nDefault value is 'false'",
+                "type": "boolean"
+              },
+              "dockerfile": {
+                "description": "Allows specifying dockerfile type build",
+                "type": "object",
+                "oneOf": [
+                  {
+                    "required": [
+                      "uri"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "devfileRegistry"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "git"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "args": {
+                    "description": "The arguments to supply to the dockerfile build.",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "buildContext": {
+                    "description": "Path of source directory to establish build context. Defaults to ${PROJECT_ROOT} in the container",
+                    "type": "string"
+                  },
+                  "devfileRegistry": {
+                    "description": "Dockerfile's Devfile Registry source",
+                    "type": "object",
+                    "required": [
+                      "id"
+                    ],
+                    "properties": {
+                      "id": {
+                        "description": "Id in a devfile registry that contains a Dockerfile. The src in the OCI registry required for the Dockerfile build will be downloaded for building the image.",
+                        "type": "string"
+                      },
+                      "registryUrl": {
+                        "description": "Devfile Registry URL to pull the Dockerfile from when using the Devfile Registry as Dockerfile src. To ensure the Dockerfile gets resolved consistently in different environments, it is recommended to always specify the 'devfileRegistryUrl' when 'Id' is used.",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "git": {
+                    "description": "Dockerfile's Git source",
+                    "type": "object",
+                    "required": [
+                      "remotes"
+                    ],
+                    "properties": {
+                      "checkoutFrom": {
+                        "description": "Defines from what the project should be checked out. Required if there are more than one remote configured",
+                        "type": "object",
+                        "properties": {
+                          "remote": {
+                            "description": "The remote name should be used as init. Required if there are more than one remote configured",
+                            "type": "string"
+                          },
+                          "revision": {
+                            "description": "The revision to checkout from. Should be branch name, tag or commit id. Default branch is used if missing or specified revision is not found.",
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "fileLocation": {
+                        "description": "Location of the Dockerfile in the Git repository when using git as Dockerfile src. Defaults to Dockerfile.",
+                        "type": "string"
+                      },
+                      "remotes": {
+                        "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects \u0026 Image Component's Git source can only have at most one remote configured.",
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "rootRequired": {
+                    "description": "Specify if a privileged builder pod is required.\n\nDefault value is 'false'",
+                    "type": "boolean"
+                  },
+                  "uri": {
+                    "description": "URI Reference of a Dockerfile. It can be a full URL or a relative URI from the current devfile as the base URI.",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "imageName": {
+                "description": "Name of the image for the resulting outerloop build",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
           "kubernetes": {
             "description": "Allows importing into the devworkspace the Kubernetes resources defined in a given manifest. For example this allows reusing the Kubernetes definitions used to deploy some runtime components in production.",
             "type": "object",
@@ -423,6 +582,10 @@ const JsonSchema220 = `{
               }
             ],
             "properties": {
+              "deployByDefault": {
+                "description": "Defines if the component should be deployed during startup.\n\nDefault value is 'false'",
+                "type": "boolean"
+              },
               "endpoints": {
                 "type": "array",
                 "items": {
@@ -432,6 +595,13 @@ const JsonSchema220 = `{
                     "targetPort"
                   ],
                   "properties": {
+                    "annotation": {
+                      "description": "Annotations to be added to Kubernetes Ingress or Openshift Route",
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "attributes": {
                       "description": "Map of implementation-dependant string-based free-form attributes.\n\nExamples of Che-specific attributes:\n- cookiesAuthEnabled: \"true\" / \"false\",\n- type: \"terminal\" / \"ide\" / \"ide-dev\",",
                       "type": "object",
@@ -449,7 +619,7 @@ const JsonSchema220 = `{
                     },
                     "name": {
                       "type": "string",
-                      "maxLength": 63,
+                      "maxLength": 15,
                       "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
                     },
                     "path": {
@@ -474,6 +644,7 @@ const JsonSchema220 = `{
                       "type": "boolean"
                     },
                     "targetPort": {
+                      "description": "The port number should be unique.",
                       "type": "integer"
                     }
                   },
@@ -513,6 +684,10 @@ const JsonSchema220 = `{
               }
             ],
             "properties": {
+              "deployByDefault": {
+                "description": "Defines if the component should be deployed during startup.\n\nDefault value is 'false'",
+                "type": "boolean"
+              },
               "endpoints": {
                 "type": "array",
                 "items": {
@@ -522,6 +697,13 @@ const JsonSchema220 = `{
                     "targetPort"
                   ],
                   "properties": {
+                    "annotation": {
+                      "description": "Annotations to be added to Kubernetes Ingress or Openshift Route",
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "attributes": {
                       "description": "Map of implementation-dependant string-based free-form attributes.\n\nExamples of Che-specific attributes:\n- cookiesAuthEnabled: \"true\" / \"false\",\n- type: \"terminal\" / \"ide\" / \"ide-dev\",",
                       "type": "object",
@@ -539,7 +721,7 @@ const JsonSchema220 = `{
                     },
                     "name": {
                       "type": "string",
-                      "maxLength": 63,
+                      "maxLength": 15,
                       "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
                     },
                     "path": {
@@ -564,6 +746,7 @@ const JsonSchema220 = `{
                       "type": "boolean"
                     },
                     "targetPort": {
+                      "description": "The port number should be unique.",
                       "type": "integer"
                     }
                   },
@@ -767,7 +950,7 @@ const JsonSchema220 = `{
             ],
             "properties": {
               "apply": {
-                "description": "Command that consists in applying a given component definition, typically bound to a devworkspace event.\n\nFor example, when an 'apply' command is bound to a 'preStart' event, and references a 'container' component, it will start the container as a K8S initContainer in the devworkspace POD, unless the component has its 'dedicatedPod' field set to 'true'.\n\nWhen no 'apply' command exist for a given component, it is assumed the component will be applied at devworkspace start by default.",
+                "description": "Command that consists in applying a given component definition, typically bound to a devworkspace event.\n\nFor example, when an 'apply' command is bound to a 'preStart' event, and references a 'container' component, it will start the container as a K8S initContainer in the devworkspace POD, unless the component has its 'dedicatedPod' field set to 'true'.\n\nWhen no 'apply' command exist for a given component, it is assumed the component will be applied at devworkspace start by default, unless 'deployByDefault' for that component is set to false.",
                 "type": "object",
                 "properties": {
                   "component": {
@@ -789,7 +972,8 @@ const JsonSchema220 = `{
                           "build",
                           "run",
                           "test",
-                          "debug"
+                          "debug",
+                          "deploy"
                         ]
                       }
                     },
@@ -833,7 +1017,8 @@ const JsonSchema220 = `{
                           "build",
                           "run",
                           "test",
-                          "debug"
+                          "debug",
+                          "deploy"
                         ]
                       }
                     },
@@ -896,7 +1081,8 @@ const JsonSchema220 = `{
                           "build",
                           "run",
                           "test",
-                          "debug"
+                          "debug",
+                          "deploy"
                         ]
                       }
                     },
@@ -955,6 +1141,11 @@ const JsonSchema220 = `{
                 "required": [
                   "volume"
                 ]
+              },
+              {
+                "required": [
+                  "image"
+                ]
               }
             ],
             "properties": {
@@ -967,6 +1158,27 @@ const JsonSchema220 = `{
                 "description": "Allows adding and configuring devworkspace-related containers",
                 "type": "object",
                 "properties": {
+                  "annotation": {
+                    "description": "Annotations that should be added to specific resources for this container",
+                    "type": "object",
+                    "properties": {
+                      "deployment": {
+                        "description": "Annotations to be added to deployment",
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      },
+                      "service": {
+                        "description": "Annotations to be added to service",
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "additionalProperties": false
+                  },
                   "args": {
                     "description": "The arguments to supply to the command running the dockerimage component. The arguments are supplied either to the default command provided in the image or to the overridden command.\n\nDefaults to an empty array, meaning use whatever is defined in the image.",
                     "type": "array",
@@ -999,6 +1211,13 @@ const JsonSchema220 = `{
                         "name"
                       ],
                       "properties": {
+                        "annotation": {
+                          "description": "Annotations to be added to Kubernetes Ingress or Openshift Route",
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "attributes": {
                           "description": "Map of implementation-dependant string-based free-form attributes.\n\nExamples of Che-specific attributes:\n- cookiesAuthEnabled: \"true\" / \"false\",\n- type: \"terminal\" / \"ide\" / \"ide-dev\",",
                           "type": "object",
@@ -1015,7 +1234,7 @@ const JsonSchema220 = `{
                         },
                         "name": {
                           "type": "string",
-                          "maxLength": 63,
+                          "maxLength": 15,
                           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
                         },
                         "path": {
@@ -1039,6 +1258,7 @@ const JsonSchema220 = `{
                           "type": "boolean"
                         },
                         "targetPort": {
+                          "description": "The port number should be unique.",
                           "type": "integer"
                         }
                       },
@@ -1108,6 +1328,124 @@ const JsonSchema220 = `{
                 },
                 "additionalProperties": false
               },
+              "image": {
+                "description": "Allows specifying the definition of an image for outer loop builds",
+                "type": "object",
+                "oneOf": [
+                  {
+                    "required": [
+                      "dockerfile"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "autoBuild"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "autoBuild": {
+                    "description": "Defines if the image should be built during startup.\n\nDefault value is 'false'",
+                    "type": "boolean"
+                  },
+                  "dockerfile": {
+                    "description": "Allows specifying dockerfile type build",
+                    "type": "object",
+                    "oneOf": [
+                      {
+                        "required": [
+                          "uri"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "devfileRegistry"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "git"
+                        ]
+                      }
+                    ],
+                    "properties": {
+                      "args": {
+                        "description": "The arguments to supply to the dockerfile build.",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "buildContext": {
+                        "description": "Path of source directory to establish build context. Defaults to ${PROJECT_ROOT} in the container",
+                        "type": "string"
+                      },
+                      "devfileRegistry": {
+                        "description": "Dockerfile's Devfile Registry source",
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "description": "Id in a devfile registry that contains a Dockerfile. The src in the OCI registry required for the Dockerfile build will be downloaded for building the image.",
+                            "type": "string"
+                          },
+                          "registryUrl": {
+                            "description": "Devfile Registry URL to pull the Dockerfile from when using the Devfile Registry as Dockerfile src. To ensure the Dockerfile gets resolved consistently in different environments, it is recommended to always specify the 'devfileRegistryUrl' when 'Id' is used.",
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "git": {
+                        "description": "Dockerfile's Git source",
+                        "type": "object",
+                        "properties": {
+                          "checkoutFrom": {
+                            "description": "Defines from what the project should be checked out. Required if there are more than one remote configured",
+                            "type": "object",
+                            "properties": {
+                              "remote": {
+                                "description": "The remote name should be used as init. Required if there are more than one remote configured",
+                                "type": "string"
+                              },
+                              "revision": {
+                                "description": "The revision to checkout from. Should be branch name, tag or commit id. Default branch is used if missing or specified revision is not found.",
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "fileLocation": {
+                            "description": "Location of the Dockerfile in the Git repository when using git as Dockerfile src. Defaults to Dockerfile.",
+                            "type": "string"
+                          },
+                          "remotes": {
+                            "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects \u0026 Image Component's Git source can only have at most one remote configured.",
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "rootRequired": {
+                        "description": "Specify if a privileged builder pod is required.\n\nDefault value is 'false'",
+                        "type": "boolean"
+                      },
+                      "uri": {
+                        "description": "URI Reference of a Dockerfile. It can be a full URL or a relative URI from the current devfile as the base URI.",
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "imageName": {
+                    "description": "Name of the image for the resulting outerloop build",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
               "kubernetes": {
                 "description": "Allows importing into the devworkspace the Kubernetes resources defined in a given manifest. For example this allows reusing the Kubernetes definitions used to deploy some runtime components in production.",
                 "type": "object",
@@ -1124,6 +1462,10 @@ const JsonSchema220 = `{
                   }
                 ],
                 "properties": {
+                  "deployByDefault": {
+                    "description": "Defines if the component should be deployed during startup.\n\nDefault value is 'false'",
+                    "type": "boolean"
+                  },
                   "endpoints": {
                     "type": "array",
                     "items": {
@@ -1132,6 +1474,13 @@ const JsonSchema220 = `{
                         "name"
                       ],
                       "properties": {
+                        "annotation": {
+                          "description": "Annotations to be added to Kubernetes Ingress or Openshift Route",
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "attributes": {
                           "description": "Map of implementation-dependant string-based free-form attributes.\n\nExamples of Che-specific attributes:\n- cookiesAuthEnabled: \"true\" / \"false\",\n- type: \"terminal\" / \"ide\" / \"ide-dev\",",
                           "type": "object",
@@ -1148,7 +1497,7 @@ const JsonSchema220 = `{
                         },
                         "name": {
                           "type": "string",
-                          "maxLength": 63,
+                          "maxLength": 15,
                           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
                         },
                         "path": {
@@ -1172,6 +1521,7 @@ const JsonSchema220 = `{
                           "type": "boolean"
                         },
                         "targetPort": {
+                          "description": "The port number should be unique.",
                           "type": "integer"
                         }
                       },
@@ -1211,6 +1561,10 @@ const JsonSchema220 = `{
                   }
                 ],
                 "properties": {
+                  "deployByDefault": {
+                    "description": "Defines if the component should be deployed during startup.\n\nDefault value is 'false'",
+                    "type": "boolean"
+                  },
                   "endpoints": {
                     "type": "array",
                     "items": {
@@ -1219,6 +1573,13 @@ const JsonSchema220 = `{
                         "name"
                       ],
                       "properties": {
+                        "annotation": {
+                          "description": "Annotations to be added to Kubernetes Ingress or Openshift Route",
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "attributes": {
                           "description": "Map of implementation-dependant string-based free-form attributes.\n\nExamples of Che-specific attributes:\n- cookiesAuthEnabled: \"true\" / \"false\",\n- type: \"terminal\" / \"ide\" / \"ide-dev\",",
                           "type": "object",
@@ -1235,7 +1596,7 @@ const JsonSchema220 = `{
                         },
                         "name": {
                           "type": "string",
-                          "maxLength": 63,
+                          "maxLength": 15,
                           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
                         },
                         "path": {
@@ -1259,6 +1620,7 @@ const JsonSchema220 = `{
                           "type": "boolean"
                         },
                         "targetPort": {
+                          "description": "The port number should be unique.",
                           "type": "integer"
                         }
                       },
@@ -1365,7 +1727,7 @@ const JsonSchema220 = `{
                     "additionalProperties": false
                   },
                   "remotes": {
-                    "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects can only have at most one remote configured.",
+                    "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects \u0026 Image Component's Git source can only have at most one remote configured.",
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
@@ -1449,7 +1811,7 @@ const JsonSchema220 = `{
                     "additionalProperties": false
                   },
                   "remotes": {
-                    "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects can only have at most one remote configured.",
+                    "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects \u0026 Image Component's Git source can only have at most one remote configured.",
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
@@ -1550,7 +1912,7 @@ const JsonSchema220 = `{
                 "additionalProperties": false
               },
               "remotes": {
-                "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects can only have at most one remote configured.",
+                "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects \u0026 Image Component's Git source can only have at most one remote configured.",
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"
@@ -1638,7 +2000,7 @@ const JsonSchema220 = `{
                 "additionalProperties": false
               },
               "remotes": {
-                "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects can only have at most one remote configured.",
+                "description": "The remotes map which should be initialized in the git project. Projects must have at least one remote configured while StarterProjects \u0026 Image Component's Git source can only have at most one remote configured.",
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"

@@ -14,8 +14,7 @@ The validation will be done as part of schema validation, the rule will be intro
 
 ### Endpoints:
 - all the endpoint names are unique across components
-  
-Since network is shared in the same pod, endpoint ports should be unique across components, two components cannot have the same target port but two endpoints in a single component can have the same target port. Only exception: container component with `dedicatedpod=true`
+- all the endpoint ports are unique across components. Only exception: container component with `dedicatedpod=true`
 
 ### Commands:
 1. id must be unique
@@ -23,8 +22,9 @@ Since network is shared in the same pod, endpoint ports should be unique across 
     - Should not reference itself via a subcommand
     - Should not indirectly reference itself via a subcommand which is a composite command
     - Should reference a valid devfile command
-3. exec and apply command should: map to a valid container component
-4. `{build, run, test, debug}`, each kind of group can only have one default command associated with it. If there are multiple commands of the same kind without a default, a warning will be displayed.
+3. exec command should: map to a valid container component
+4. apply command should: map to a valid container/kubernetes/openshift/image component
+5. `{build, run, test, debug, deploy}`, each kind of group can only have one default command associated with it. If there are multiple commands of the same kind without a default, a warning will be displayed.
 
 ### Components:
 Common rules for all components types:
@@ -33,6 +33,8 @@ Common rules for all components types:
 #### Container component 
 1. the container components must reference a valid volume component if it uses volume mounts, and the volume components are unique
 2. `PROJECT_SOURCE` or `PROJECTS_ROOT` are reserved environment variables defined under env, cannot be defined again in `env`
+3. the annotations should not have conflict values for same key, except deployment annotations and service annotations set for a container with `dedicatedPod=true`
+4. resource requirements, e.g. `cpuLimit`, `cpuRequest`, `memoryLimit`, `memoryRequest`, must be in valid quantity format; and the resource requested must be less than the resource limit (if specified).
 
 #### Plugin Component
 - Commands in plugins components share the same commands validation rules as listed above. Validation occurs after overriding and merging, in flattened devfile
@@ -40,6 +42,9 @@ Common rules for all components types:
 
 #### Kubernetes & Openshift component 
 - URI needs to be in valid URI format
+
+#### Image component 
+- A Dockerfile Image component's git source cannot have more than one remote defined. If checkout remote is mentioned, validate it against the remote configured map
 
 
 ### Events:
@@ -60,7 +65,3 @@ Common rules for all components types:
 ### projects
 - if more than one remote is configured, a checkout remote is mandatory
 - if checkout remote is mentioned, validate it against the starter project remote configured map
-
-### Architectures
-
-Architectures list support the following values - `amd64`, `arm64`, `ppc64le`, `s390x`. These values are determined by the .manifests[].platform["architecture"] field from an image's manifests and manually selected.
