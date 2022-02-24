@@ -1,9 +1,7 @@
 package library
 
 import (
-	"github.com/devfile/registry-support/index/generator/schema"
-	gitpkg "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -11,12 +9,15 @@ import (
 	"path"
 	"path/filepath"
 	"syscall"
-	"fmt"
+
 	"github.com/devfile/library/pkg/testingutil/filesystem"
+	"github.com/devfile/registry-support/index/generator/schema"
+	gitpkg "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
-// downloadRemoteStack downloads the stack version outside of the registry repo
-func downloadRemoteStack(git *schema.Git, path string, verbose bool) (err error) {
+// DownloadRemoteStack downloads the stack version outside of the registry repo
+func DownloadRemoteStack(git *schema.Git, path string, verbose bool) (err error) {
 
 	// convert revision to referenceName type, ref name could be a branch or tag
 	// if revision is not specified it would be the default branch of the project
@@ -35,7 +36,6 @@ func downloadRemoteStack(git *schema.Git, path string, verbose bool) (err error)
 		// lets consider revision to be a branch name first
 		refName = plumbing.NewBranchReferenceName(revision)
 	}
-
 
 	cloneOptions := &gitpkg.CloneOptions{
 		URL:           git.Url,
