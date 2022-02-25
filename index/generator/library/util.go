@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -92,6 +93,27 @@ func DownloadRemoteStack(git *schema.Git, path string, verbose bool) (err error)
 
 	return nil
 
+}
+
+// DownloadStackFromZipUrl downloads the zip file containing the stack at a given url
+func DownloadStackFromZipUrl(url string) ([]byte, error) {
+	// Setup HTTP downloader client
+	client := http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			req.URL.Opaque = req.URL.Path
+			return nil
+		},
+	}
+
+	// Download from given url, if error return empty bytes
+	resp, err := client.Get(url)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer resp.Body.Close()
+
+	// Read bytes from response and return, error will be nil if successful
+	return ioutil.ReadAll(resp.Body)
 }
 
 // GitSubDir handles subDir for git components using the default filesystem
