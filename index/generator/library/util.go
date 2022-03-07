@@ -1,17 +1,18 @@
 package library
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/devfile/library/pkg/testingutil/filesystem"
+	dfutil "github.com/devfile/library/pkg/util"
 	"github.com/devfile/registry-support/index/generator/schema"
 	gitpkg "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -96,24 +97,23 @@ func DownloadRemoteStack(git *schema.Git, path string, verbose bool) (err error)
 }
 
 // DownloadStackFromZipUrl downloads the zip file containing the stack at a given url
-func DownloadStackFromZipUrl(url string) ([]byte, error) {
-	// Setup HTTP downloader client
-	client := http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			req.URL.Opaque = req.URL.Path
-			return nil
-		},
-	}
+func DownloadStackFromZipUrl(zipUrl string, subDir string, path string) ([]byte, error) {
+	unzipDst := filepath.Join(path, subDir)
+	zipDst := filepath.Join(path, filepath.Base(zipUrl))
 
-	// Download from given url, if error return empty bytes
-	resp, err := client.Get(url)
-	if err != nil {
+	// Download from given url and unzip to given path. Just unzip subDir when
+	// specified, if error return empty bytes.
+	if err := dfutil.GetAndExtractZip(zipUrl, unzipDst, subDir); err != nil {
 		return []byte{}, err
 	}
-	defer resp.Body.Close()
+
+	// Zip directory containing unzipped content
+	if err := ZipDir(unzipDst, zipDst); err != nil {
+		return []byte{}, err
+	}
 
 	// Read bytes from response and return, error will be nil if successful
-	return ioutil.ReadAll(resp.Body)
+	return ioutil.ReadFile(zipDst)
 }
 
 // GitSubDir handles subDir for git components using the default filesystem
@@ -182,7 +182,7 @@ func gitSubDir(srcPath, destinationPath, subDir string, fs filesystem.Filesystem
 }
 
 // copyFileWithFs copies a single file from src to dst
-func copyFileWithFs(src, dst string, fs filesystem.Filesystem) error {
+func copyFileWithFs(src, unZipDst string, fs filesystem.Filesystem) error {
 	var err error
 	var srcinfo os.FileInfo
 
@@ -196,7 +196,7 @@ func copyFileWithFs(src, dst string, fs filesystem.Filesystem) error {
 		}
 	}()
 
-	dstfd, err := fs.Create(dst)
+	dstfd, err := fs.Create(unZipDst)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func copyFileWithFs(src, dst string, fs filesystem.Filesystem) error {
 	if srcinfo, err = fs.Stat(src); err != nil {
 		return err
 	}
-	return fs.Chmod(dst, srcinfo.Mode())
+	return fs.Chmod(unZipDst, srcinfo.Mode())
 }
 
 // copyDirWithFS copies a whole directory recursively
@@ -233,8 +233,8 @@ func copyDirWithFS(src string, dst string, fs filesystem.Filesystem) error {
 		return err
 	}
 	for _, fd := range fds {
-		srcfp := path.Join(src, fd.Name())
-		dstfp := path.Join(dst, fd.Name())
+		srcfp := filepath.Join(src, fd.Name())
+		dstfp := filepath.Join(dst, fd.Name())
 
 		if fd.IsDir() {
 			if err = copyDirWithFS(srcfp, dstfp, fs); err != nil {
@@ -287,4 +287,45 @@ func cleanDir(originalPath string, leaveBehindFiles map[string]bool, fs filesyst
 		}
 	}
 	return err
+}
+
+// ZipDir creates a zip file from a given directory specified by the src argument into a zip archive
+// specified by the *dst* argument
+func ZipDir(src string, dst string) error {
+	zipFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	writer := zip.NewWriter(zipFile)
+	zipper := createZipper(writer, src)
+	defer writer.Close()
+
+	return filepath.Walk(src, zipper)
+}
+
+// createZipper creates walk function to populate a zip file with the given writer argument
+func createZipper(writer *zip.Writer, root string) filepath.WalkFunc {
+	return func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		} else if !info.IsDir() {
+			srcFile, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer srcFile.Close()
+
+			dstFile, err := writer.Create(filepath.Join(".", strings.Split(path, root)[1]))
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.Copy(dstFile, srcFile); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
 }
