@@ -1,10 +1,10 @@
 package library
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/devfile/registry-support/index/generator/schema"
@@ -60,6 +60,7 @@ func TestDownloadStackFromZipUrl(t *testing.T) {
 		{
 			"Case 1: Java Quarkus (Without subDir)",
 			map[string]string{
+				"Name":   "quarkus",
 				"ZipUrl": "https://code.quarkus.io/d?e=io.quarkus%3Aquarkus-resteasy&e=io.quarkus%3Aquarkus-micrometer&e=io.quarkus%3Aquarkus-smallrye-health&e=io.quarkus%3Aquarkus-openshift&cn=devfile",
 				"SubDir": "",
 			},
@@ -75,10 +76,9 @@ func TestDownloadStackFromZipUrl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			zipUrlBasename := filepath.Base(tt.params["ZipUrl"])
-			zipUrlBasename = strings.ReplaceAll(zipUrlBasename, filepath.Ext(zipUrlBasename), "")
-			zipPath := filepath.Join(os.TempDir(), zipUrlBasename)
-			bytes, err := DownloadStackFromZipUrl(tt.params["ZipUrl"], tt.params["SubDir"], zipPath)
+			path := filepath.Join(os.TempDir(), tt.params["Name"])
+			zipPath := fmt.Sprintf("%s.zip", path)
+			bytes, err := DownloadStackFromZipUrl(tt.params["ZipUrl"], tt.params["SubDir"], path)
 
 			if err != nil {
 				t.Errorf("Zip download to bytes failed: %v", err)
@@ -89,6 +89,12 @@ func TestDownloadStackFromZipUrl(t *testing.T) {
 			if resultantType != zipType {
 				t.Errorf("Content type of download not matching expected. Expected: %s, Actual: %s",
 					zipType, resultantType)
+			}
+
+			if err := os.RemoveAll(path); err != nil {
+				t.Logf("Deleting %s failed.", path)
+			} else if err := os.Remove(zipPath); err != nil {
+				t.Logf("Deleting %s failed.", zipPath)
 			}
 		})
 	}
@@ -113,6 +119,7 @@ func TestDownloadStackFromGit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hiddenGitPath := filepath.Join(tt.path, ".git")
+			zipPath := fmt.Sprintf("%s.zip", tt.path)
 			bytes, err := DownloadStackFromGit(tt.git, tt.path, false)
 
 			if err != nil {
@@ -126,6 +133,12 @@ func TestDownloadStackFromGit(t *testing.T) {
 			if resultantType != zipType {
 				t.Errorf("Content type of download not matching expected. Expected: %s, Actual: %s",
 					zipType, resultantType)
+			}
+
+			if err := os.RemoveAll(tt.path); err != nil {
+				t.Logf("Deleting %s failed.", tt.path)
+			} else if err := os.Remove(zipPath); err != nil {
+				t.Logf("Deleting %s failed.", zipPath)
 			}
 		})
 	}
