@@ -118,7 +118,7 @@ func DownloadStackFromGit(git *schema.Git, path string, verbose bool) ([]byte, e
 // DownloadStackFromZipUrl downloads the zip file containing the stack at a given url
 func DownloadStackFromZipUrl(zipUrl string, subDir string, path string) ([]byte, error) {
 	unzipDst := filepath.Join(path, subDir)
-	zipDst := filepath.Join(path, filepath.Base(zipUrl))
+	zipDst := fmt.Sprintf("%s.zip", path)
 
 	// Download from given url and unzip to given path. Just unzip subDir when
 	// specified, if error return empty bytes.
