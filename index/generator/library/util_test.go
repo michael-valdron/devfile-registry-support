@@ -2,6 +2,7 @@ package library
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -154,5 +155,44 @@ func TestCleanDir(t *testing.T) {
 }
 
 func TestZipDir(t *testing.T) {
-	assert.Fail(t, "Not Implemented.")
+	dirPath := filepath.Join(os.TempDir(), "TestZipDir")
+	filePath := filepath.Join(dirPath, "test.txt")
+	zipPath := fmt.Sprintf("%s.zip", dirPath)
+
+	if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
+		t.Errorf("Failed to create directory '%s': %v", dirPath, err)
+	}
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		t.Errorf("Failed to create file '%s': %v", filePath, err)
+	}
+
+	if _, err = file.WriteString("Hello World!"); err != nil {
+		t.Errorf("Failed to write to file '%s': %v", filePath, err)
+	}
+
+	file.Close()
+
+	if err = ZipDir(dirPath, zipPath); err != nil {
+		t.Errorf("Failed to zip directory '%s': %v", dirPath, err)
+	}
+
+	bytes, err := ioutil.ReadFile(zipPath)
+	if err != nil {
+		t.Errorf("Unable to read zip file '%s': %v", zipPath, err)
+	}
+
+	resultantType := http.DetectContentType(bytes)
+
+	if resultantType != zipType {
+		t.Errorf("Content type of download not matching expected. Expected: %s, Actual: %s",
+			zipType, resultantType)
+	}
+
+	if err := os.RemoveAll(dirPath); err != nil {
+		t.Logf("Deleting %s failed.", dirPath)
+	} else if err := os.Remove(zipPath); err != nil {
+		t.Logf("Deleting %s failed.", zipPath)
+	}
 }
