@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devfile/registry-support/index/generator/schema"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,6 +49,43 @@ func TestDownloadStackFromZipUrl(t *testing.T) {
 
 			if err != nil {
 				t.Errorf("Zip download to bytes failed: %v", err)
+			}
+
+			resultantType := http.DetectContentType(bytes)
+
+			if resultantType != zipType {
+				t.Errorf("Content type of download not matching expected. Expected: %s, Actual: %s",
+					zipType, resultantType)
+			}
+		})
+	}
+}
+
+func TestDownloadStackFromGit(t *testing.T) {
+	tests := []struct {
+		name string
+		git  *schema.Git
+		path string
+	}{
+		{
+			"Case 1: Maven Java (Without subDir)",
+			&schema.Git{
+				Url:        "https://github.com/odo-devfiles/springboot-ex.git",
+				RemoteName: "origin",
+			},
+			filepath.Join(os.TempDir(), "springboot-ex"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hiddenGitPath := filepath.Join(tt.path, ".git")
+			bytes, err := DownloadStackFromGit(tt.git, tt.path, false)
+
+			if err != nil {
+				t.Errorf("Git download to bytes failed: %v", err)
+			} else if _, err := os.Stat(hiddenGitPath); os.IsExist(err) {
+				t.Errorf(".git exist but isn't suppose to within %s", hiddenGitPath)
 			}
 
 			resultantType := http.DetectContentType(bytes)

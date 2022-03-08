@@ -96,6 +96,25 @@ func DownloadRemoteStack(git *schema.Git, path string, verbose bool) (err error)
 
 }
 
+// DownloadStackFromGit downloads the stack from a git repo
+func DownloadStackFromGit(git *schema.Git, path string, verbose bool) ([]byte, error) {
+	zipPath := fmt.Sprintf("%s.zip", path)
+
+	// Download from given git url. Downloaded result contains subDir
+	// when specified, if error return empty bytes.
+	if err := DownloadRemoteStack(git, path, verbose); err != nil {
+		return []byte{}, err
+	}
+
+	// Zip directory containing downloaded git repo
+	if err := ZipDir(path, zipPath); err != nil {
+		return []byte{}, err
+	}
+
+	// Read bytes from response and return, error will be nil if successful
+	return ioutil.ReadFile(zipPath)
+}
+
 // DownloadStackFromZipUrl downloads the zip file containing the stack at a given url
 func DownloadStackFromZipUrl(zipUrl string, subDir string, path string) ([]byte, error) {
 	unzipDst := filepath.Join(path, subDir)
