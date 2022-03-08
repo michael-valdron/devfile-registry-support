@@ -16,7 +16,40 @@ const (
 )
 
 func TestDownloadRemoteStack(t *testing.T) {
-	assert.Fail(t, "Not Implemented.")
+	tests := []struct {
+		name string
+		git  *schema.Git
+		path string
+	}{
+		{
+			"Case 1: Maven Java (Without subDir)",
+			&schema.Git{
+				Url:        "https://github.com/odo-devfiles/springboot-ex.git",
+				RemoteName: "origin",
+			},
+			filepath.Join(os.TempDir(), "springboot-ex"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hiddenGitPath := filepath.Join(tt.path, ".git")
+
+			if err := DownloadRemoteStack(tt.git, tt.path, false); err != nil {
+				t.Errorf("Git download to bytes failed: %v", err)
+			}
+
+			if _, err := os.Stat(tt.path); os.IsNotExist(err) {
+				t.Errorf("%s does not exist but is suppose to", tt.path)
+			} else if _, err := os.Stat(hiddenGitPath); os.IsExist(err) {
+				t.Errorf(".git exist but isn't suppose to within %s", tt.path)
+			}
+
+			if err := os.RemoveAll(tt.path); err != nil {
+				t.Logf("Deleting %s failed.", tt.path)
+			}
+		})
+	}
 }
 
 func TestDownloadStackFromZipUrl(t *testing.T) {
