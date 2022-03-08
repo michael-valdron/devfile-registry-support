@@ -65,13 +65,6 @@ func TestDownloadStackFromZipUrl(t *testing.T) {
 				"SubDir": "",
 			},
 		},
-		// {
-		// 	"Case 2: With subDir",
-		// 	map[string]string{
-		// 		"ZipUrl": "",
-		// 		"SubDir": "",
-		// 	},
-		// },
 	}
 
 	for _, tt := range tests {
