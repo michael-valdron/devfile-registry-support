@@ -24,9 +24,9 @@ import (
 	"gopkg.in/segmentio/analytics-go.v3"
 )
 
-// serveRootEndpoint sets up the handler for the root (/) endpoint on the server
+// ServeRootEndpoint sets up the handler for the root (/) endpoint on the server
 // If html is requested (i.e. from a web browser), the viewer is displayed, otherwise the devfile index is served.
-func serveRootEndpoint(c *gin.Context) {
+func ServeRootEndpoint(c *gin.Context) {
 	// Determine if text/html was requested by the client
 	acceptHeader := c.Request.Header.Values("Accept")
 	if util.IsHtmlRequested(acceptHeader) {
@@ -36,11 +36,11 @@ func serveRootEndpoint(c *gin.Context) {
 	}
 }
 
-func serveDevfileIndexV1(c *gin.Context) {
+func ServeDevfileIndexV1(c *gin.Context) {
 	serveDevfileIndex(c, true)
 }
 
-func serveDevfileIndexV2(c *gin.Context) {
+func ServeDevfileIndexV2(c *gin.Context) {
 	serveDevfileIndex(c, false)
 }
 
@@ -62,26 +62,26 @@ func serveDevfileIndex(c *gin.Context, wantV1Index bool) {
 	buildIndexAPIResponse(c, wantV1Index)
 }
 
-func serveDevfileIndexV1WithType(c *gin.Context) {
+func ServeDevfileIndexV1WithType(c *gin.Context) {
 
 	// Serve the index with type
 	buildIndexAPIResponse(c, true)
 }
 
-func serveDevfileIndexV2WithType(c *gin.Context) {
+func ServeDevfileIndexV2WithType(c *gin.Context) {
 
 	// Serve the index with type
 	buildIndexAPIResponse(c, false)
 }
 
-// serveHealthCheck serves endpoint `/health` for registry health check
-func serveHealthCheck(c *gin.Context) {
+// ServeHealthCheck serves endpoint `/health` for registry health check
+func ServeHealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "the server is up and running",
 	})
 }
 
-func serveDevfileWithVersion(c *gin.Context) {
+func ServeDevfileWithVersion(c *gin.Context) {
 	name := c.Param("name")
 	version := c.Param("version")
 	bytes, devfileIndex := fetchDevfile(c, name, version)
@@ -111,21 +111,21 @@ func serveDevfileWithVersion(c *gin.Context) {
 	}
 }
 
-// serveDevfile returns the devfile content
-func serveDevfile(c *gin.Context) {
+// ServeDevfile returns the devfile content
+func ServeDevfile(c *gin.Context) {
 	// append the stack version, for endpoint /devfiles/name without version
 	c.Params = append(c.Params, gin.Param{Key: "version", Value: "default"})
-	serveDevfileWithVersion(c)
+	ServeDevfileWithVersion(c)
 }
 
-// serveDevfileStarterProject returns the starter project content for the devfile using default version
-func serveDevfileStarterProject(c *gin.Context) {
+// ServeDevfileStarterProject returns the starter project content for the devfile using default version
+func ServeDevfileStarterProject(c *gin.Context) {
 	c.Params = append(c.Params, gin.Param{Key: "version", Value: "default"})
-	serveDevfileStarterProjectWithVersion(c)
+	ServeDevfileStarterProjectWithVersion(c)
 }
 
 // serveDevfileStarterProject returns the starter project content for the devfile using specified version
-func serveDevfileStarterProjectWithVersion(c *gin.Context) {
+func ServeDevfileStarterProjectWithVersion(c *gin.Context) {
 	devfileName := c.Param("name")
 	version := c.Param("version")
 	starterProjectName := c.Param("starterProjectName")
