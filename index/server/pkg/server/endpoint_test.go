@@ -53,15 +53,40 @@ func TestServeHealthCheck(t *testing.T) {
 
 func TestServeDevfileIndexV1(t *testing.T) {
 	// TODO: Create testing data for ServeDevfileIndexV1 mock testing
+	tests := []struct {
+		name     string
+		params   gin.Params
+		wantCode int
+	}{
+		{
+			name: "Successful Response Test",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "nodejs"},
+				gin.Param{Key: "starterProjectName", Value: "nodejs-starter"},
+			},
+			wantCode: 200,
+		},
+		{
+			name: "Not Found Response Test",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "node"},
+			},
+			wantCode: 404,
+		},
+	}
 
-	gin.SetMode(gin.TestMode)
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
 
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
 
-	// TODO: Insert params
+			c.Params = test.params
 
-	server.ServeDevfileIndexV1(c)
+			server.ServeDevfileIndexV1(c)
 
-	// TODO: Insert checks
+			// TODO: Insert checks
+		})
+	}
 }
