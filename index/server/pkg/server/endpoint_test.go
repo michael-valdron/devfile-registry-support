@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/devfile/registry-support/index/server/pkg/server"
@@ -12,7 +14,6 @@ import (
 
 func TestServeHealthCheck(t *testing.T) {
 	var got gin.H
-	var expected interface{}
 
 	gin.SetMode(gin.TestMode)
 
@@ -21,15 +22,16 @@ func TestServeHealthCheck(t *testing.T) {
 
 	server.ServeHealthCheck(c)
 
-	expected = 200
-	if w.Code != expected {
-		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", w.Code, expected)
+	wantStatusCode := 200
+	if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, wantStatusCode) {
+		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, wantStatusCode)
 		return
 	}
 
-	expected = "application/json"
-	if header := w.Header(); header.Get("Content-Type") != expected {
-		t.Errorf("Did not get expected content type, Got: %v, Expected: %v", header.Get("Content-Type"), expected)
+	wantContentType := "application/json"
+	header := w.Header()
+	if gotContentType := strings.Split(header.Get("Content-Type"), ";")[0]; !reflect.DeepEqual(gotContentType, wantContentType) {
+		t.Errorf("Did not get expected content type, Got: %v, Expected: %v", gotContentType, wantContentType)
 		return
 	}
 
@@ -44,9 +46,13 @@ func TestServeHealthCheck(t *testing.T) {
 		return
 	}
 
-	expected = "the server is up and running"
-	if got["message"] != expected {
-		t.Errorf("Did not get expected body or message, Got: %v, Expected: %v", got["message"], expected)
+	wantMessage := "the server is up and running"
+	gotMessage, found := got["message"]
+	if !found {
+		t.Error("Did not get any body or message.")
+		return
+	} else if !reflect.DeepEqual(gotMessage, wantMessage) {
+		t.Errorf("Did not get expected body or message, Got: %v, Expected: %v", gotMessage, wantMessage)
 		return
 	}
 }
