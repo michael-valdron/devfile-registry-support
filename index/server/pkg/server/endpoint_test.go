@@ -49,7 +49,7 @@ func TestServeHealthCheck(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	ServeHealthCheck(c)
+	serveHealthCheck(c)
 
 	wantStatusCode := 200
 	if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, wantStatusCode) {
@@ -136,7 +136,7 @@ func TestServeDevfileIndexV1(t *testing.T) {
 
 			c.Params = test.params
 
-			ServeDevfileIndexV1(c)
+			serveDevfileIndexV1(c)
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
@@ -196,7 +196,7 @@ func TestServeDevfileIndexV2(t *testing.T) {
 
 			c.Params = test.params
 
-			ServeDevfileIndexV2(c)
+			serveDevfileIndexV2(c)
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)

@@ -55,18 +55,18 @@ func CreateIndexServer() *gin.Engine {
 	router := gin.Default()
 
 	// Registry REST APIs
-	router.GET("/", ServeRootEndpoint)
-	router.GET("/index", ServeDevfileIndexV1)
-	router.GET("/index/:type", ServeDevfileIndexV1WithType)
-	router.GET("/health", ServeHealthCheck)
-	router.GET("/devfiles/:name", ServeDevfile)
-	router.GET("/devfiles/:name/:version", ServeDevfileWithVersion)
-	router.GET("/devfiles/:name/starter-projects/:starterProjectName", ServeDevfileStarterProject)
-	router.GET("/devfiles/:name/:version/starter-projects/:starterProjectName", ServeDevfileStarterProjectWithVersion)
+	router.GET("/", serveRootEndpoint)
+	router.GET("/index", serveDevfileIndexV1)
+	router.GET("/index/:type", serveDevfileIndexV1WithType)
+	router.GET("/health", serveHealthCheck)
+	router.GET("/devfiles/:name", serveDevfile)
+	router.GET("/devfiles/:name/:version", serveDevfileWithVersion)
+	router.GET("/devfiles/:name/starter-projects/:starterProjectName", serveDevfileStarterProject)
+	router.GET("/devfiles/:name/:version/starter-projects/:starterProjectName", serveDevfileStarterProjectWithVersion)
 
 	// Registry REST APIs for index v2
-	router.GET("/v2index", ServeDevfileIndexV2)
-	router.GET("/v2index/:type", ServeDevfileIndexV2WithType)
+	router.GET("/v2index", serveDevfileIndexV2)
+	router.GET("/v2index/:type", serveDevfileIndexV2WithType)
 
 	// Set up a simple proxy for /v2 endpoints
 	// Only allow HEAD and GET requests
