@@ -1,26 +1,55 @@
-package server_test
+package server
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/devfile/registry-support/index/server/pkg/server"
 	"github.com/gin-gonic/gin"
 )
+
+func setupVars() {
+	var registryPath string
+
+	if _, found := os.LookupEnv("DEVFILE_REGISTRY"); found {
+		registryPath = os.Getenv("DEVFILE_REGISTRY")
+	} else {
+		registryPath = "../../tests/registry"
+	}
+
+	if stacksPath == "" {
+		stacksPath = filepath.Join(registryPath, "stacks")
+	}
+	if samplesPath == "" {
+		samplesPath = filepath.Join(registryPath, "samples")
+	}
+	if indexPath == "" {
+		indexPath = filepath.Join(registryPath, "index_main.json")
+	}
+	if sampleIndexPath == "" {
+		sampleIndexPath = filepath.Join(registryPath, "index_extra.json")
+	}
+	if stackIndexPath == "" {
+		stackIndexPath = filepath.Join(registryPath, "index_registry.json")
+	}
+}
 
 func TestServeHealthCheck(t *testing.T) {
 	var got gin.H
 
 	gin.SetMode(gin.TestMode)
 
+	setupVars()
+
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	server.ServeHealthCheck(c)
+	ServeHealthCheck(c)
 
 	wantStatusCode := 200
 	if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, wantStatusCode) {
@@ -58,24 +87,41 @@ func TestServeHealthCheck(t *testing.T) {
 }
 
 func TestServeDevfileIndexV1(t *testing.T) {
-	// TODO: Create testing data for ServeDevfileIndexV1 mock testing
+	setupVars()
 	tests := []struct {
 		name     string
 		params   gin.Params
 		wantCode int
 	}{
 		{
-			name: "Successful Response Test",
+			name:     "GET /index - Successful Response Test",
+			wantCode: 200,
+		},
+		{
+			name: "GET /index/stack - Successful Response Test",
 			params: gin.Params{
-				gin.Param{Key: "name", Value: "nodejs"},
-				gin.Param{Key: "starterProjectName", Value: "nodejs-starter"},
+				gin.Param{Key: "type", Value: "stack"},
 			},
 			wantCode: 200,
 		},
 		{
-			name: "Not Found Response Test",
+			name: "GET /index/sample - Successful Response Test",
 			params: gin.Params{
-				gin.Param{Key: "name", Value: "node"},
+				gin.Param{Key: "type", Value: "sample"},
+			},
+			wantCode: 200,
+		},
+		{
+			name: "GET /index/all - Successful Response Test",
+			params: gin.Params{
+				gin.Param{Key: "type", Value: "all"},
+			},
+			wantCode: 200,
+		},
+		{
+			name: "GET /index/notatype - Type Not Found Response Test",
+			params: gin.Params{
+				gin.Param{Key: "type", Value: "notatype"},
 			},
 			wantCode: 404,
 		},
@@ -90,9 +136,72 @@ func TestServeDevfileIndexV1(t *testing.T) {
 
 			c.Params = test.params
 
-			server.ServeDevfileIndexV1(c)
+			ServeDevfileIndexV1(c)
 
-			// TODO: Insert checks
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
+				return
+			}
+		})
+	}
+}
+
+func TestServeDevfileIndexV2(t *testing.T) {
+	setupVars()
+	tests := []struct {
+		name     string
+		params   gin.Params
+		wantCode int
+	}{
+		{
+			name:     "GET /v2index - Successful Response Test",
+			wantCode: 200,
+		},
+		{
+			name: "GET /v2index/stack - Successful Response Test",
+			params: gin.Params{
+				gin.Param{Key: "type", Value: "stack"},
+			},
+			wantCode: 200,
+		},
+		{
+			name: "GET /v2index/sample - Successful Response Test",
+			params: gin.Params{
+				gin.Param{Key: "type", Value: "sample"},
+			},
+			wantCode: 200,
+		},
+		{
+			name: "GET /v2index/all - Successful Response Test",
+			params: gin.Params{
+				gin.Param{Key: "type", Value: "all"},
+			},
+			wantCode: 200,
+		},
+		{
+			name: "GET /v2index/notatype - Type Not Found Response Test",
+			params: gin.Params{
+				gin.Param{Key: "type", Value: "notatype"},
+			},
+			wantCode: 404,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+
+			c.Params = test.params
+
+			ServeDevfileIndexV2(c)
+
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
+				return
+			}
 		})
 	}
 }
