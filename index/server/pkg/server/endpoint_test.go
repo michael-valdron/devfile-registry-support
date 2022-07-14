@@ -87,16 +87,30 @@ func TestServeHealthCheck(t *testing.T) {
 }
 
 func TestServeDevfileIndexV1(t *testing.T) {
+	const wantStatusCode = 200
+
+	setupVars()
+
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	serveDevfileIndexV1(c)
+
+	if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, wantStatusCode) {
+		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, wantStatusCode)
+		return
+	}
+}
+
+func TestServeDevfileIndexV1WithType(t *testing.T) {
 	setupVars()
 	tests := []struct {
 		name     string
 		params   gin.Params
 		wantCode int
 	}{
-		{
-			name:     "GET /index - Successful Response Test",
-			wantCode: 200,
-		},
 		{
 			name: "GET /index/stack - Successful Response Test",
 			params: gin.Params{
@@ -136,7 +150,7 @@ func TestServeDevfileIndexV1(t *testing.T) {
 
 			c.Params = test.params
 
-			serveDevfileIndexV1(c)
+			serveDevfileIndexV1WithType(c)
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
@@ -147,16 +161,30 @@ func TestServeDevfileIndexV1(t *testing.T) {
 }
 
 func TestServeDevfileIndexV2(t *testing.T) {
+	const wantStatusCode = 200
+
+	setupVars()
+
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	serveDevfileIndexV2(c)
+
+	if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, wantStatusCode) {
+		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, wantStatusCode)
+		return
+	}
+}
+
+func TestServeDevfileIndexV2WithType(t *testing.T) {
 	setupVars()
 	tests := []struct {
 		name     string
 		params   gin.Params
 		wantCode int
 	}{
-		{
-			name:     "GET /v2index - Successful Response Test",
-			wantCode: 200,
-		},
 		{
 			name: "GET /v2index/stack - Successful Response Test",
 			params: gin.Params{
@@ -196,7 +224,7 @@ func TestServeDevfileIndexV2(t *testing.T) {
 
 			c.Params = test.params
 
-			serveDevfileIndexV2(c)
+			serveDevfileIndexV2WithType(c)
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
