@@ -8,6 +8,7 @@ require (
 	github.com/devfile/api/v2 v2.0.0-20220117162434-6e6e6a8bc14c
 	github.com/devfile/library v1.2.1-0.20220308191614-f0f7e11b17de
 	github.com/devfile/registry-support/index/generator v0.0.0-20220624203950-e7282a4695b6
+	github.com/emirpasic/gods v1.12.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/hashicorp/go-version v1.4.0
 	github.com/kylelemons/godebug v0.0.0-20170820004349-d65d576e9348
@@ -27,7 +28,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
