@@ -2,7 +2,11 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -10,8 +14,97 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devfile/registry-support/index/server/pkg/util"
 	"github.com/gin-gonic/gin"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
+const (
+	ociServerIP = "127.0.0.1:5000"
+)
+
+type responseError struct {
+	code    string `json:"code"`
+	message string `json:"message"`
+	detail  string `json:"detail"`
+}
+
+func writeErrors(errors []responseError) ([]byte, error) {
+	return json.Marshal(struct {
+		errors []responseError `json:"errors"`
+	}{
+		errors: errors,
+	})
+}
+
+func validateMethod(handle http.HandlerFunc, allowedMethods ...string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if arrayList := util.ConvertStringArrayToArrayList(allowedMethods); arrayList.Contains(r.Method) {
+			handle(w, r)
+		} else {
+			bytes, err := writeErrors([]responseError{
+				{
+					code:    fmt.Sprintf("%d", http.StatusBadRequest),
+					message: fmt.Sprintf("%s method not supported for route %s", r.Method, r.URL.Path),
+				},
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			w.WriteHeader(http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			if _, err = w.Write(bytes); err != nil {
+				log.Fatal(err)
+			}
+		}
+	})
+}
+
+func getManifest(w http.ResponseWriter, r *http.Request) {
+	bytes, err := json.Marshal(ocispec.Manifest{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", ocispec.MediaTypeImageManifest)
+	if _, err = w.Write(bytes); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func getBlob(w http.ResponseWriter, r *http.Request) {
+	bytes, err := json.Marshal(ocispec.Descriptor{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", devfileMediaType)
+	if _, err = w.Write(bytes); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func setupMockOCIServer() (func(), error) {
+	router := http.NewServeMux()
+	router.Handle("/v2/:name/manifests/:ref", validateMethod(getManifest, http.MethodGet, http.MethodHead))
+	router.Handle("/v2/:name/blob/:digest", validateMethod(getBlob, http.MethodGet, http.MethodHead))
+	testOCIServer := httptest.NewUnstartedServer(router)
+
+	l, err := net.Listen("tcp", ociServerIP)
+	if err != nil {
+		return testOCIServer.Close, fmt.Errorf("Unexpected error while creating listener: %v", err)
+	}
+
+	testOCIServer.Listener.Close()
+	testOCIServer.Listener = l
+
+	testOCIServer.Start()
+
+	return testOCIServer.Close, nil
+}
 
 func setupVars() {
 	var registryPath string
