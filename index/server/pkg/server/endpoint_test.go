@@ -30,11 +30,13 @@ type responseError struct {
 }
 
 func writeErrors(errors []responseError) ([]byte, error) {
-	return json.Marshal(struct {
-		errors []responseError `json:"errors"`
+	data := struct {
+		Errors []responseError `json:"errors"`
 	}{
-		errors: errors,
-	})
+		Errors: errors,
+	}
+
+	return json.Marshal(data)
 }
 
 func validateMethod(handle http.HandlerFunc, allowedMethods ...string) http.Handler {
@@ -241,7 +243,7 @@ func TestServeDevfileIndexV1WithType(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 
-			c.Params = test.params
+			c.Params = append(c.Params, test.params...)
 
 			serveDevfileIndexV1WithType(c)
 
@@ -315,9 +317,51 @@ func TestServeDevfileIndexV2WithType(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 
-			c.Params = test.params
+			c.Params = append(c.Params, test.params...)
 
 			serveDevfileIndexV2WithType(c)
+
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
+				return
+			}
+		})
+	}
+}
+
+func TestServeDevfile(t *testing.T) {
+	tests := []struct {
+		name     string
+		params   gin.Params
+		wantCode int
+	}{
+		{
+			name: "Fetch Devfile",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-maven"},
+			},
+			wantCode: 200,
+		},
+	}
+
+	closeServer, err := setupMockOCIServer()
+	if err != nil {
+		t.Errorf("Did not setup mock OCI server properly: %v", err)
+		return
+	}
+	defer closeServer()
+	setupVars()
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+
+			c.Params = append(c.Params, test.params...)
+
+			serveDevfile(c)
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
