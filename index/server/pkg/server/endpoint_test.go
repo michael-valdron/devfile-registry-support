@@ -91,8 +91,8 @@ func getBlob(w http.ResponseWriter, r *http.Request) {
 
 func setupMockOCIServer() (func(), error) {
 	router := http.NewServeMux()
-	router.Handle("/v2/:name/manifests/:ref", validateMethod(getManifest, http.MethodGet, http.MethodHead))
-	router.Handle("/v2/:name/blob/:digest", validateMethod(getBlob, http.MethodGet, http.MethodHead))
+	router.Handle("/v2/devfile-catalog/:name/manifests/:ref", validateMethod(getManifest, http.MethodGet, http.MethodHead))
+	router.Handle("/v2/devfile-catalog/:name/blob/:digest", validateMethod(getBlob, http.MethodGet, http.MethodHead))
 	testOCIServer := httptest.NewUnstartedServer(router)
 
 	l, err := net.Listen("tcp", ociServerIP)
