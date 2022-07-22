@@ -30,13 +30,9 @@ type responseError struct {
 }
 
 func writeErrors(errors []responseError) ([]byte, error) {
-	data := struct {
-		Errors []responseError `json:"errors"`
-	}{
-		Errors: errors,
-	}
-
-	return json.Marshal(data)
+	return json.Marshal(gin.H{
+		"errors": errors,
+	})
 }
 
 func validateMethod(handle http.HandlerFunc, allowedMethods ...string) http.Handler {
