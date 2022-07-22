@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devfile/registry-support/index/server/pkg/ocitest"
 	"github.com/gin-gonic/gin"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -21,29 +21,6 @@ import (
 const (
 	ociServerIP = "127.0.0.1:5000"
 )
-
-type responseError struct {
-	code    string `json:"code"`
-	message string `json:"message"`
-	detail  string `json:"detail"`
-}
-
-func writeErrors(errors []responseError) ([]byte, error) {
-	return json.Marshal(gin.H{
-		"errors": errors,
-	})
-}
-
-func servePing(c *gin.Context) {
-	data, err := json.Marshal(gin.H{
-		"message": "ok",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	c.Data(http.StatusOK, "application/json", data)
-}
 
 func serveManifest(c *gin.Context) {
 	bytes, err := json.Marshal(ocispec.Manifest{})
@@ -64,34 +41,17 @@ func serveBlob(c *gin.Context) {
 }
 
 func setupMockOCIServer() (func(), error) {
-	gin.SetMode(gin.TestMode)
-
-	// Create router engine of mock OCI server
-	router := gin.Default()
-
-	// Testing Route for checking mock OCI server
-	router.GET("/v2/ping", servePing)
+	mockOCIServer := ocitest.NewMockOCIServer()
 
 	// Pull Routes
-	router.GET("/v2/devfile-catalog/:name/manifests/:ref", serveManifest)
-	router.GET("/v2/devfile-catalog/:name/blob/:digest", serveBlob)
-	router.HEAD("/v2/devfile-catalog/:name/manifests/:ref", serveManifest)
-	router.HEAD("/v2/devfile-catalog/:name/blob/:digest", serveBlob)
+	mockOCIServer.ServeManifest = serveManifest
+	mockOCIServer.ServeBlob = serveBlob
 
-	// Create mock OCI server using the router engine
-	testOCIServer := httptest.NewUnstartedServer(router)
-
-	l, err := net.Listen("tcp", ociServerIP)
-	if err != nil {
-		return testOCIServer.Close, fmt.Errorf("Unexpected error while creating listener: %v", err)
+	if err := mockOCIServer.Start(ociServerIP); err != nil {
+		return nil, err
 	}
 
-	testOCIServer.Listener.Close()
-	testOCIServer.Listener = l
-
-	testOCIServer.Start()
-
-	return testOCIServer.Close, nil
+	return mockOCIServer.Close, nil
 }
 
 func setupVars() {
@@ -121,12 +81,12 @@ func setupVars() {
 }
 
 func TestMockOCIServer(t *testing.T) {
-	closeServer, err := setupMockOCIServer()
-	if err != nil {
+	mockOCIServer := ocitest.NewMockOCIServer()
+	if err := mockOCIServer.Start(ociServerIP); err != nil {
 		t.Errorf("Failed to setup mock OCI server: %v", err)
 		return
 	}
-	defer closeServer()
+	defer mockOCIServer.Close()
 	setupVars()
 
 	resp, err := http.Get(fmt.Sprintf("http://%s", filepath.Join(ociServerIP, "/v2/ping")))
