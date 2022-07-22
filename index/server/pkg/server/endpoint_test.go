@@ -63,36 +63,51 @@ func validateMethod(handle http.HandlerFunc, allowedMethods ...string) http.Hand
 	})
 }
 
-func getManifest(w http.ResponseWriter, r *http.Request) {
+func servePing(c *gin.Context) {
+	data, err := json.Marshal(gin.H{
+		"message": "ok",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.Data(http.StatusOK, "application/json", data)
+}
+
+func serveManifest(c *gin.Context) {
 	bytes, err := json.Marshal(ocispec.Manifest{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", ocispec.MediaTypeImageManifest)
-	if _, err = w.Write(bytes); err != nil {
-		log.Fatal(err)
-	}
+	c.Data(http.StatusOK, ocispec.MediaTypeImageManifest, bytes)
 }
 
-func getBlob(w http.ResponseWriter, r *http.Request) {
+func serveBlob(c *gin.Context) {
 	bytes, err := json.Marshal(ocispec.Descriptor{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", devfileMediaType)
-	if _, err = w.Write(bytes); err != nil {
-		log.Fatal(err)
-	}
+	c.Data(http.StatusOK, devfileMediaType, bytes)
 }
 
 func setupMockOCIServer() (func(), error) {
-	router := http.NewServeMux()
-	router.Handle("/v2/devfile-catalog/:name/manifests/:ref", validateMethod(getManifest, http.MethodGet, http.MethodHead))
-	router.Handle("/v2/devfile-catalog/:name/blob/:digest", validateMethod(getBlob, http.MethodGet, http.MethodHead))
+	gin.SetMode(gin.TestMode)
+
+	// Create router engine of mock OCI server
+	router := gin.Default()
+
+	// Testing Route for checking mock OCI server
+	router.GET("/v2/ping", servePing)
+
+	// Pull Routes
+	router.GET("/v2/devfile-catalog/:name/manifests/:ref", serveManifest)
+	router.GET("/v2/devfile-catalog/:name/blob/:digest", serveBlob)
+	router.HEAD("/v2/devfile-catalog/:name/manifests/:ref", serveManifest)
+	router.HEAD("/v2/devfile-catalog/:name/blob/:digest", serveBlob)
+
+	// Create mock OCI server using the router engine
 	testOCIServer := httptest.NewUnstartedServer(router)
 
 	l, err := net.Listen("tcp", ociServerIP)
@@ -131,6 +146,26 @@ func setupVars() {
 	}
 	if stackIndexPath == "" {
 		stackIndexPath = filepath.Join(registryPath, "index_registry.json")
+	}
+}
+
+func TestMockOCIServer(t *testing.T) {
+	closeServer, err := setupMockOCIServer()
+	if err != nil {
+		t.Errorf("Failed to setup mock OCI server: %v", err)
+		return
+	}
+	defer closeServer()
+	setupVars()
+
+	resp, err := http.Get(fmt.Sprintf("http://%s", filepath.Join(ociServerIP, "/v2/ping")))
+	if err != nil {
+		t.Errorf("Error in request: %v", err)
+		return
+	}
+
+	if !reflect.DeepEqual(resp.StatusCode, 200) {
+		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", resp.StatusCode, 200)
 	}
 }
 
