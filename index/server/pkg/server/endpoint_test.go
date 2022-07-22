@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devfile/registry-support/index/server/pkg/util"
 	"github.com/gin-gonic/gin"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -32,30 +31,6 @@ type responseError struct {
 func writeErrors(errors []responseError) ([]byte, error) {
 	return json.Marshal(gin.H{
 		"errors": errors,
-	})
-}
-
-func validateMethod(handle http.HandlerFunc, allowedMethods ...string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if arrayList := util.ConvertStringArrayToArrayList(allowedMethods); arrayList.Contains(r.Method) {
-			handle(w, r)
-		} else {
-			bytes, err := writeErrors([]responseError{
-				{
-					code:    fmt.Sprintf("%d", http.StatusBadRequest),
-					message: fmt.Sprintf("%s method not supported for route %s", r.Method, r.URL.Path),
-				},
-			})
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			w.WriteHeader(http.StatusBadRequest)
-			w.Header().Set("Content-Type", "application/json")
-			if _, err = w.Write(bytes); err != nil {
-				log.Fatal(err)
-			}
-		}
 	})
 }
 
