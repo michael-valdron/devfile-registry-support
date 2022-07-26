@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/devfile/registry-support/index/server/pkg/ocitest"
 	"github.com/gin-gonic/gin"
+	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -22,8 +25,77 @@ const (
 	ociServerIP = "127.0.0.1:5000"
 )
 
+var (
+	manifests = map[string]map[string]ocispec.Manifest{
+		"java-maven": {
+			"1.1.0": {
+				Versioned: specs.Versioned{SchemaVersion: 2},
+				Config: ocispec.Descriptor{
+					MediaType: devfileConfigMediaType,
+				},
+				Layers: []ocispec.Descriptor{
+					{
+						MediaType: devfileMediaType,
+						Digest:    "b81a4a857ebbd6b7093c38703e3b7c6d7a2652abfd55898f82fdea45634fd549",
+						Size:      1251,
+						Annotations: map[string]string{
+							"org.opencontainers.image.title": devfileName,
+						},
+					},
+				},
+			},
+		},
+	}
+)
+
 func serveManifest(c *gin.Context) {
-	bytes, err := json.Marshal(ocispec.Manifest{})
+	if c.Request.Method == http.MethodGet {
+		getManifest(c)
+	}
+}
+
+func getManifest(c *gin.Context) {
+	name, ref := c.Param("name"), c.Param("ref")
+	var (
+		stackManifest ocispec.Manifest
+		found         bool
+		bytes         []byte
+		err           error
+	)
+
+	if strings.HasPrefix(ref, "sha256:") {
+		stackManifests, found := manifests[name]
+		if !found {
+			notFoundManifest(c, ref)
+			return
+		}
+
+		found = false
+		for _, manifest := range stackManifests {
+			dgst, err := digestEntity(manifest)
+			if err != nil {
+				log.Fatal(err)
+			} else if reflect.DeepEqual(ref, dgst) {
+				stackManifest = manifest
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			notFoundManifest(c, ref)
+			return
+		}
+	} else {
+		stackManifest, found = manifests[name][ref]
+
+		if !found {
+			notFoundManifest(c, ref)
+			return
+		}
+	}
+
+	bytes, err = json.Marshal(stackManifest)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -31,13 +103,88 @@ func serveManifest(c *gin.Context) {
 	c.Data(http.StatusOK, ocispec.MediaTypeImageManifest, bytes)
 }
 
+func notFoundManifest(c *gin.Context, tag string) {
+	c.JSON(http.StatusNotFound, ocitest.WriteErrors([]ocitest.ResponseError{
+		{
+			Code:    "MANIFEST_UNKNOWN",
+			Message: "manifest unknown",
+			Detail: ocitest.ResponseErrorDetails{
+				Tag: tag,
+			},
+		},
+	}))
+}
+
+func digestEntity(e interface{}) (string, error) {
+	bytes, err := json.Marshal(e)
+	if err != nil {
+		return "", err
+	}
+
+	return digest.FromBytes(bytes).String(), nil
+}
+
+func digestFile(filepath string) (string, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	dgst, err := digest.FromReader(file)
+	if err != nil {
+		return "", err
+	}
+
+	return dgst.String(), nil
+}
+
 func serveBlob(c *gin.Context) {
-	bytes, err := json.Marshal(ocispec.Descriptor{})
+	name, dgst := c.Param("name"), c.Param("digest")
+	stackRoot := filepath.Join(stacksPath, name)
+	stackRootList, err := ioutil.ReadDir(stackRoot)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var (
+		blobPath string
+		found    bool
+	)
+
+	found = false
+	for _, stackFile := range stackRootList {
+		fpath := filepath.Join(stackRoot, stackFile.Name())
+		fdgst, err := digestFile(fpath)
+		if err != nil {
+			log.Fatal(err)
+		} else if reflect.DeepEqual(dgst, strings.TrimLeft(fdgst, "sha256:")) {
+			blobPath = fpath
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		notFoundBlob(c)
+		return
+	}
+
+	file, err := os.Open(blobPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	c.Data(http.StatusOK, devfileMediaType, bytes)
+	c.Data(http.StatusOK, http.DetectContentType(bytes), bytes)
+}
+
+func notFoundBlob(c *gin.Context) {
+	c.Data(http.StatusNotFound, "plain/text", []byte{})
 }
 
 func setupMockOCIServer() (func(), error) {
