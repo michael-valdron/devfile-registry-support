@@ -11,10 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type ResponseErrorDetails struct {
+	Tag string `json:"Tag"`
+}
+
 type ResponseError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Detail  string `json:"detail"`
+	Code    string               `json:"code"`
+	Message string               `json:"message"`
+	Detail  ResponseErrorDetails `json:"detail"`
 }
 
 type MockOCIServer struct {
@@ -35,10 +39,10 @@ func servePing(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
-func WriteErrors(errors []ResponseError) ([]byte, error) {
-	return json.Marshal(gin.H{
+func WriteErrors(errors []ResponseError) gin.H {
+	return gin.H{
 		"errors": errors,
-	})
+	}
 }
 
 func NewMockOCIServer() *MockOCIServer {
@@ -68,8 +72,8 @@ func (server *MockOCIServer) Start(listenAddr string) error {
 
 	// Fetch blob routes
 	if server.ServeBlob != nil {
-		server.router.GET("/v2/devfile-catalog/:name/blob/:digest", server.ServeBlob)
-		server.router.HEAD("/v2/devfile-catalog/:name/blob/:digest", server.ServeBlob)
+		server.router.GET("/v2/devfile-catalog/:name/blobs/:digest", server.ServeBlob)
+		server.router.HEAD("/v2/devfile-catalog/:name/blobs/:digest", server.ServeBlob)
 	}
 
 	l, err := net.Listen("tcp", listenAddr)
