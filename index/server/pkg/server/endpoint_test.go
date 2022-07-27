@@ -46,6 +46,40 @@ var (
 				},
 			},
 		},
+		"go": {
+			"1.1.0": {
+				Versioned: specs.Versioned{SchemaVersion: 2},
+				Config: ocispec.Descriptor{
+					MediaType: devfileConfigMediaType,
+				},
+				Layers: []ocispec.Descriptor{
+					{
+						MediaType: devfileMediaType,
+						Digest:    "sha256:4cad7c1629ba848245205a08107b296adba307f77ca3635b16920473589cb12e",
+						Size:      1086,
+						Annotations: map[string]string{
+							"org.opencontainers.image.title": devfileName,
+						},
+					},
+				},
+			},
+			"1.2.0": {
+				Versioned: specs.Versioned{SchemaVersion: 2},
+				Config: ocispec.Descriptor{
+					MediaType: devfileConfigMediaType,
+				},
+				Layers: []ocispec.Descriptor{
+					{
+						MediaType: devfileMediaType,
+						Digest:    "sha256:bb4c6b96292bbcd48f445436f7945399a4d314b111ee976d6235199e854bfb68",
+						Size:      1091,
+						Annotations: map[string]string{
+							"org.opencontainers.image.title": devfileName,
+						},
+					},
+				},
+			},
+		},
 	}
 )
 
@@ -458,6 +492,14 @@ func TestServeDevfile(t *testing.T) {
 			},
 			wantCode:          200,
 			wantSchemaVersion: "2.2.0",
+		},
+		{
+			name: "GET /devfiles/go - Fetch Devfile",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+			},
+			wantCode:          200,
+			wantSchemaVersion: "2.0.0",
 		},
 		{
 			name: "GET /devfiles/not-exist - Fetch Non-Existent Devfile",
