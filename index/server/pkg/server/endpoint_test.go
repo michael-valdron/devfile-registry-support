@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devfile/library/pkg/devfile/parser"
 	"github.com/devfile/registry-support/index/server/pkg/ocitest"
 	"github.com/gin-gonic/gin"
 	"github.com/opencontainers/go-digest"
@@ -36,7 +37,7 @@ var (
 				Layers: []ocispec.Descriptor{
 					{
 						MediaType: devfileMediaType,
-						Digest:    "b81a4a857ebbd6b7093c38703e3b7c6d7a2652abfd55898f82fdea45634fd549",
+						Digest:    "sha256:b81a4a857ebbd6b7093c38703e3b7c6d7a2652abfd55898f82fdea45634fd549",
 						Size:      1251,
 						Annotations: map[string]string{
 							"org.opencontainers.image.title": devfileName,
@@ -157,7 +158,7 @@ func serveBlob(c *gin.Context) {
 		fdgst, err := digestFile(fpath)
 		if err != nil {
 			log.Fatal(err)
-		} else if reflect.DeepEqual(dgst, strings.TrimLeft(fdgst, "sha256:")) {
+		} else if reflect.DeepEqual(dgst, fdgst) {
 			blobPath = fpath
 			found = true
 			break
@@ -444,16 +445,27 @@ func TestServeDevfileIndexV2WithType(t *testing.T) {
 
 func TestServeDevfile(t *testing.T) {
 	tests := []struct {
-		name     string
-		params   gin.Params
-		wantCode int
+		name              string
+		params            gin.Params
+		wantCode          int
+		wantSchemaVersion string
+		wantError         bool
 	}{
 		{
-			name: "Fetch Devfile",
+			name: "GET /devfiles/java-maven - Fetch Devfile",
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "java-maven"},
 			},
-			wantCode: 200,
+			wantCode:          200,
+			wantSchemaVersion: "2.2.0",
+		},
+		{
+			name: "GET /devfiles/not-exist - Fetch Non-Existent Devfile",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "not-exist"},
+			},
+			wantCode:  404,
+			wantError: true,
 		},
 	}
 
@@ -478,7 +490,16 @@ func TestServeDevfile(t *testing.T) {
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
-				return
+			} else if !test.wantError {
+				bytes := w.Body.Bytes()
+				content, err := parser.ParseFromData(bytes)
+				if err != nil {
+					t.Fatalf("Did not expect error: %v", err)
+				}
+
+				if gotSchemaVersion := content.Data.GetSchemaVersion(); !reflect.DeepEqual(gotSchemaVersion, test.wantSchemaVersion) {
+					t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotSchemaVersion, test.wantSchemaVersion)
+				}
 			}
 		})
 	}
