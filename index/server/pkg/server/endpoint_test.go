@@ -495,7 +495,7 @@ func TestServeDevfile(t *testing.T) {
 		wantError         bool
 	}{
 		{
-			name: "GET /devfiles/java-maven - Fetch Devfile",
+			name: "GET /devfiles/java-maven - Fetch Java Maven Devfile",
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "java-maven"},
 			},
@@ -503,7 +503,7 @@ func TestServeDevfile(t *testing.T) {
 			wantSchemaVersion: "2.2.0",
 		},
 		{
-			name: "GET /devfiles/go - Fetch Devfile",
+			name: "GET /devfiles/go - Fetch Go Devfile",
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "go"},
 			},
@@ -538,6 +538,97 @@ func TestServeDevfile(t *testing.T) {
 			c.Params = append(c.Params, test.params...)
 
 			serveDevfile(c)
+
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
+			} else if !test.wantError {
+				bytes := w.Body.Bytes()
+				content, err := parser.ParseFromData(bytes)
+				if err != nil {
+					t.Fatalf("Did not expect error: %v", err)
+				}
+
+				if gotSchemaVersion := content.Data.GetSchemaVersion(); !reflect.DeepEqual(gotSchemaVersion, test.wantSchemaVersion) {
+					t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotSchemaVersion, test.wantSchemaVersion)
+				}
+			}
+		})
+	}
+}
+
+func TestServeDevfileWithVersion(t *testing.T) {
+	tests := []struct {
+		name              string
+		params            gin.Params
+		wantCode          int
+		wantSchemaVersion string
+		wantError         bool
+	}{
+		{
+			name: "GET /devfiles/go/default - Fetch Go Devfile With Default Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "version", Value: "default"},
+			},
+			wantCode:          200,
+			wantSchemaVersion: "2.0.0",
+		},
+		{
+			name: "GET /devfiles/go/latest - Fetch Go Devfile With Latest Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "version", Value: "latest"},
+			},
+			wantCode:          200,
+			wantSchemaVersion: "2.1.0",
+		},
+		{
+			name: "GET /devfiles/go/1.2.0 - Fetch Go Devfile With Specific Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "version", Value: "1.2.0"},
+			},
+			wantCode:          200,
+			wantSchemaVersion: "2.1.0",
+		},
+		{
+			name: "GET /devfiles/not-exist/latest - Fetch Non-Existent Devfile With Latest Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "not-exist"},
+				gin.Param{Key: "version", Value: "latest"},
+			},
+			wantCode:  404,
+			wantError: true,
+		},
+		{
+			name: "GET /devfiles/java-maven/not-exist - Fetch Java Maven Devfile With Non-Existent Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-maven"},
+				gin.Param{Key: "version", Value: "non-exist"},
+			},
+			wantCode:  404,
+			wantError: true,
+		},
+	}
+
+	closeServer, err := setupMockOCIServer()
+	if err != nil {
+		t.Errorf("Did not setup mock OCI server properly: %v", err)
+		return
+	}
+	defer closeServer()
+	setupVars()
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+
+			c.Params = append(c.Params, test.params...)
+
+			serveDevfileWithVersion(c)
 
 			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
 				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
