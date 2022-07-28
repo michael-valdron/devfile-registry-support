@@ -747,3 +747,104 @@ func TestServeDevfileStarterProject(t *testing.T) {
 		})
 	}
 }
+
+func TestServeDevfileStarterProjectWithVersion(t *testing.T) {
+	const wantContentType = "application/zip"
+	tests := []struct {
+		name      string
+		params    gin.Params
+		wantCode  int
+		wantError bool
+	}{
+		{
+			name: "GET /devfiles/go/default/starter-projects/go-starter - Fetch Go 'go-starter' Starter Project With Default Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "version", Value: "default"},
+				gin.Param{Key: "starterProjectName", Value: "go-starter"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/go/latest/starter-projects/go-starter - Fetch Go 'go-starter' Starter Project With Latest Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "version", Value: "latest"},
+				gin.Param{Key: "starterProjectName", Value: "go-starter"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/go/1.2.0/starter-projects/go-starter - Fetch Go 'go-starter' Starter Project With Specific Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "version", Value: "1.2.0"},
+				gin.Param{Key: "starterProjectName", Value: "go-starter"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/not-exist/latest/starter-projects/some - " +
+				"Fetch 'some' starter project from Non-Existent stack With Latest Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "not-exist"},
+				gin.Param{Key: "version", Value: "latest"},
+				gin.Param{Key: "starterProjectName", Value: "some"},
+			},
+			wantCode:  http.StatusNotFound,
+			wantError: true,
+		},
+		{
+			name: "GET /devfiles/java-maven/latest/starter-projects/not-exist - " +
+				"Fetch Non-Existent starter project from Java Maven stack With Latest Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-maven"},
+				gin.Param{Key: "version", Value: "latest"},
+				gin.Param{Key: "starterProjectName", Value: "not-exist"},
+			},
+			wantCode:  http.StatusNotFound,
+			wantError: true,
+		},
+		{
+			name: "GET /devfiles/java-maven/not-exist/starter-projects/springbootproject - " +
+				"Fetch Java Maven 'springbootproject' Starter Project With Non-Existent Version",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-maven"},
+				gin.Param{Key: "version", Value: "non-exist"},
+				gin.Param{Key: "starterProjectName", Value: "springbootproject"},
+			},
+			wantCode:  http.StatusNotFound,
+			wantError: true,
+		},
+	}
+
+	closeServer, err := setupMockOCIServer()
+	if err != nil {
+		t.Errorf("Did not setup mock OCI server properly: %v", err)
+		return
+	}
+	defer closeServer()
+	setupVars()
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+
+			c.Params = append(c.Params, test.params...)
+
+			serveDevfileStarterProjectWithVersion(c)
+
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
+			} else if !test.wantError {
+				gotContentType := http.DetectContentType(w.Body.Bytes())
+				if !reflect.DeepEqual(gotContentType, wantContentType) {
+					t.Errorf("Did not get expected content-type, Got: %v, Expected: %v", gotContentType, wantContentType)
+				}
+			}
+		})
+	}
+}
