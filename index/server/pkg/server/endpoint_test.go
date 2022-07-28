@@ -81,6 +81,24 @@ var (
 				},
 			},
 		},
+		"java-quarkus": {
+			"1.1.0": {
+				Versioned: specs.Versioned{SchemaVersion: 2},
+				Config: ocispec.Descriptor{
+					MediaType: devfileConfigMediaType,
+				},
+				Layers: []ocispec.Descriptor{
+					{
+						MediaType: devfileMediaType,
+						Digest:    "sha256:6143ffeab064d0b9a6991a6e1025a1b63d01be87e197fabb8a34d5a9fc3fcba0",
+						Size:      1935,
+						Annotations: map[string]string{
+							"org.opencontainers.image.title": devfileName,
+						},
+					},
+				},
+			},
+		},
 	}
 )
 
@@ -656,7 +674,7 @@ func TestServeDevfileStarterProject(t *testing.T) {
 		wantError bool
 	}{
 		{
-			name: "GET /devfiles/java-maven/starter-projects/springbootproject - Fetch Java Maven springbootproject Starter Project",
+			name: "GET /devfiles/java-maven/starter-projects/springbootproject - Fetch Java Maven 'springbootproject' Starter Project",
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "java-maven"},
 				gin.Param{Key: "starterProjectName", Value: "springbootproject"},
@@ -672,7 +690,15 @@ func TestServeDevfileStarterProject(t *testing.T) {
 			wantCode: http.StatusAccepted,
 		},
 		{
-			name: "GET /devfiles/not-exist/starter-projects/some - Fetch some starter project from Non-Existent stack",
+			name: "GET /devfiles/java-quarkus/starter-projects/community - Fetch Go 'community' Starter Project",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-quarkus"},
+				gin.Param{Key: "starterProjectName", Value: "community"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/not-exist/starter-projects/some - Fetch 'some' starter project from Non-Existent stack",
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "not-exist"},
 				gin.Param{Key: "starterProjectName", Value: "some"},
