@@ -286,8 +286,8 @@ func TestMockOCIServer(t *testing.T) {
 		return
 	}
 
-	if !reflect.DeepEqual(resp.StatusCode, 200) {
-		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", resp.StatusCode, 200)
+	if !reflect.DeepEqual(resp.StatusCode, http.StatusOK) {
+		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", resp.StatusCode, http.StatusOK)
 	}
 }
 
@@ -303,7 +303,7 @@ func TestServeHealthCheck(t *testing.T) {
 
 	serveHealthCheck(c)
 
-	wantStatusCode := 200
+	wantStatusCode := http.StatusOK
 	if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, wantStatusCode) {
 		t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, wantStatusCode)
 		return
@@ -339,7 +339,7 @@ func TestServeHealthCheck(t *testing.T) {
 }
 
 func TestServeDevfileIndexV1(t *testing.T) {
-	const wantStatusCode = 200
+	const wantStatusCode = http.StatusOK
 
 	setupVars()
 
@@ -368,28 +368,28 @@ func TestServeDevfileIndexV1WithType(t *testing.T) {
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "stack"},
 			},
-			wantCode: 200,
+			wantCode: http.StatusOK,
 		},
 		{
 			name: "GET /index/sample - Successful Response Test",
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "sample"},
 			},
-			wantCode: 200,
+			wantCode: http.StatusOK,
 		},
 		{
 			name: "GET /index/all - Successful Response Test",
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "all"},
 			},
-			wantCode: 200,
+			wantCode: http.StatusOK,
 		},
 		{
 			name: "GET /index/notatype - Type Not Found Response Test",
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "notatype"},
 			},
-			wantCode: 404,
+			wantCode: http.StatusNotFound,
 		},
 	}
 
@@ -413,7 +413,7 @@ func TestServeDevfileIndexV1WithType(t *testing.T) {
 }
 
 func TestServeDevfileIndexV2(t *testing.T) {
-	const wantStatusCode = 200
+	const wantStatusCode = http.StatusOK
 
 	setupVars()
 
@@ -442,28 +442,28 @@ func TestServeDevfileIndexV2WithType(t *testing.T) {
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "stack"},
 			},
-			wantCode: 200,
+			wantCode: http.StatusOK,
 		},
 		{
 			name: "GET /v2index/sample - Successful Response Test",
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "sample"},
 			},
-			wantCode: 200,
+			wantCode: http.StatusOK,
 		},
 		{
 			name: "GET /v2index/all - Successful Response Test",
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "all"},
 			},
-			wantCode: 200,
+			wantCode: http.StatusOK,
 		},
 		{
 			name: "GET /v2index/notatype - Type Not Found Response Test",
 			params: gin.Params{
 				gin.Param{Key: "type", Value: "notatype"},
 			},
-			wantCode: 404,
+			wantCode: http.StatusNotFound,
 		},
 	}
 
@@ -499,7 +499,7 @@ func TestServeDevfile(t *testing.T) {
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "java-maven"},
 			},
-			wantCode:          200,
+			wantCode:          http.StatusOK,
 			wantSchemaVersion: "2.2.0",
 		},
 		{
@@ -507,7 +507,7 @@ func TestServeDevfile(t *testing.T) {
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "go"},
 			},
-			wantCode:          200,
+			wantCode:          http.StatusOK,
 			wantSchemaVersion: "2.0.0",
 		},
 		{
@@ -515,7 +515,7 @@ func TestServeDevfile(t *testing.T) {
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "not-exist"},
 			},
-			wantCode:  404,
+			wantCode:  http.StatusNotFound,
 			wantError: true,
 		},
 	}
@@ -570,7 +570,7 @@ func TestServeDevfileWithVersion(t *testing.T) {
 				gin.Param{Key: "name", Value: "go"},
 				gin.Param{Key: "version", Value: "default"},
 			},
-			wantCode:          200,
+			wantCode:          http.StatusOK,
 			wantSchemaVersion: "2.0.0",
 		},
 		{
@@ -579,7 +579,7 @@ func TestServeDevfileWithVersion(t *testing.T) {
 				gin.Param{Key: "name", Value: "go"},
 				gin.Param{Key: "version", Value: "latest"},
 			},
-			wantCode:          200,
+			wantCode:          http.StatusOK,
 			wantSchemaVersion: "2.1.0",
 		},
 		{
@@ -588,7 +588,7 @@ func TestServeDevfileWithVersion(t *testing.T) {
 				gin.Param{Key: "name", Value: "go"},
 				gin.Param{Key: "version", Value: "1.2.0"},
 			},
-			wantCode:          200,
+			wantCode:          http.StatusOK,
 			wantSchemaVersion: "2.1.0",
 		},
 		{
@@ -597,7 +597,7 @@ func TestServeDevfileWithVersion(t *testing.T) {
 				gin.Param{Key: "name", Value: "not-exist"},
 				gin.Param{Key: "version", Value: "latest"},
 			},
-			wantCode:  404,
+			wantCode:  http.StatusNotFound,
 			wantError: true,
 		},
 		{
@@ -606,7 +606,7 @@ func TestServeDevfileWithVersion(t *testing.T) {
 				gin.Param{Key: "name", Value: "java-maven"},
 				gin.Param{Key: "version", Value: "non-exist"},
 			},
-			wantCode:  404,
+			wantCode:  http.StatusNotFound,
 			wantError: true,
 		},
 	}
@@ -641,6 +641,81 @@ func TestServeDevfileWithVersion(t *testing.T) {
 
 				if gotSchemaVersion := content.Data.GetSchemaVersion(); !reflect.DeepEqual(gotSchemaVersion, test.wantSchemaVersion) {
 					t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotSchemaVersion, test.wantSchemaVersion)
+				}
+			}
+		})
+	}
+}
+
+func TestServeDevfileStarterProject(t *testing.T) {
+	const wantContentType = "application/zip"
+	tests := []struct {
+		name      string
+		params    gin.Params
+		wantCode  int
+		wantError bool
+	}{
+		{
+			name: "GET /devfiles/java-maven/starter-projects/springbootproject - Fetch Java Maven springbootproject Starter Project",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-maven"},
+				gin.Param{Key: "starterProjectName", Value: "springbootproject"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/go/starter-projects/go-starter - Fetch Go 'go-starter' Starter Project",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "go"},
+				gin.Param{Key: "starterProjectName", Value: "go-starter"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/not-exist/starter-projects/some - Fetch some starter project from Non-Existent stack",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "not-exist"},
+				gin.Param{Key: "starterProjectName", Value: "some"},
+			},
+			wantCode:  http.StatusNotFound,
+			wantError: true,
+		},
+		{
+			name: "GET /devfiles/java-maven/starter-projects/not-exist - Fetch Non-Existent starter project from Java Maven stack",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-maven"},
+				gin.Param{Key: "starterProjectName", Value: "not-exist"},
+			},
+			wantCode:  http.StatusNotFound,
+			wantError: true,
+		},
+	}
+
+	closeServer, err := setupMockOCIServer()
+	if err != nil {
+		t.Errorf("Did not setup mock OCI server properly: %v", err)
+		return
+	}
+	defer closeServer()
+	setupVars()
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+
+			c.Params = append(c.Params, test.params...)
+
+			serveDevfileStarterProject(c)
+
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
+			} else if !test.wantError {
+				gotContentType := http.DetectContentType(w.Body.Bytes())
+				if !reflect.DeepEqual(gotContentType, wantContentType) {
+					t.Errorf("Did not get expected content-type, Got: %v, Expected: %v", gotContentType, wantContentType)
 				}
 			}
 		})
