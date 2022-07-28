@@ -99,6 +99,24 @@ var (
 				},
 			},
 		},
+		"java-wildfly": {
+			"1.0.0": {
+				Versioned: specs.Versioned{SchemaVersion: 2},
+				Config: ocispec.Descriptor{
+					MediaType: devfileConfigMediaType,
+				},
+				Layers: []ocispec.Descriptor{
+					{
+						MediaType: devfileMediaType,
+						Digest:    "sha256:a6363457f7603259b7c55c5d5752adcf1cfb146227e90890a3ca8aa6b71879dd",
+						Size:      7151,
+						Annotations: map[string]string{
+							"org.opencontainers.image.title": devfileName,
+						},
+					},
+				},
+			},
+		},
 	}
 )
 
@@ -690,10 +708,26 @@ func TestServeDevfileStarterProject(t *testing.T) {
 			wantCode: http.StatusAccepted,
 		},
 		{
-			name: "GET /devfiles/java-quarkus/starter-projects/community - Fetch Go 'community' Starter Project",
+			name: "GET /devfiles/java-quarkus/starter-projects/community - Fetch Java Quarkus 'community' Starter Project",
 			params: gin.Params{
 				gin.Param{Key: "name", Value: "java-quarkus"},
 				gin.Param{Key: "starterProjectName", Value: "community"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/java-wildfly/starter-projects/microprofile-config - Fetch Java Wildfly 'microprofile-config' Starter Project",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-wildfly"},
+				gin.Param{Key: "starterProjectName", Value: "microprofile-config"},
+			},
+			wantCode: http.StatusAccepted,
+		},
+		{
+			name: "GET /devfiles/java-wildfly/starter-projects/microprofile-jwt - Fetch Java Wildfly 'microprofile-jwt' Starter Project",
+			params: gin.Params{
+				gin.Param{Key: "name", Value: "java-wildfly"},
+				gin.Param{Key: "starterProjectName", Value: "microprofile-jwt"},
 			},
 			wantCode: http.StatusAccepted,
 		},
