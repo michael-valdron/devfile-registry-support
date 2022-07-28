@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -177,29 +178,37 @@ func digestFile(filepath string) (string, error) {
 func serveBlob(c *gin.Context) {
 	name, dgst := c.Param("name"), c.Param("digest")
 	stackRoot := filepath.Join(stacksPath, name)
-	stackRootList, err := ioutil.ReadDir(stackRoot)
-	if err != nil {
-		log.Fatal(err)
-	}
 	var (
 		blobPath string
 		found    bool
+		err      error
 	)
 
 	found = false
-	for _, stackFile := range stackRootList {
-		fpath := filepath.Join(stackRoot, stackFile.Name())
-		fdgst, err := digestFile(fpath)
-		if err != nil {
-			log.Fatal(err)
-		} else if reflect.DeepEqual(dgst, fdgst) {
-			blobPath = fpath
-			found = true
-			break
-		}
-	}
+	err = filepath.WalkDir(stackRoot, func(path string, d fs.DirEntry, err error) error {
+		var fdgst string
 
-	if !found {
+		if err != nil {
+			return err
+		}
+
+		if found || d.IsDir() {
+			return nil
+		}
+
+		fdgst, err = digestFile(path)
+		if err != nil {
+			return err
+		} else if reflect.DeepEqual(dgst, fdgst) {
+			blobPath = path
+			found = true
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	} else if !found {
 		notFoundBlob(c)
 		return
 	}
