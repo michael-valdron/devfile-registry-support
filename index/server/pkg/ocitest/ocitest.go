@@ -92,3 +92,18 @@ func (server *MockOCIServer) Start(listenAddr string) error {
 func (server *MockOCIServer) Close() {
 	server.httpserver.Close()
 }
+
+type ProxyRecorder struct {
+	*httptest.ResponseRecorder
+	http.CloseNotifier
+}
+
+func NewProxyRecorder() *ProxyRecorder {
+	return &ProxyRecorder{
+		ResponseRecorder: httptest.NewRecorder(),
+	}
+}
+
+func (rec *ProxyRecorder) CloseNotify() <-chan bool {
+	return make(<-chan bool)
+}
