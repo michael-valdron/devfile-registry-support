@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -121,12 +122,6 @@ var (
 )
 
 func serveManifest(c *gin.Context) {
-	if c.Request.Method == http.MethodGet {
-		getManifest(c)
-	}
-}
-
-func getManifest(c *gin.Context) {
 	name, ref := c.Param("name"), c.Param("ref")
 	var (
 		stackManifest ocispec.Manifest
@@ -167,24 +162,32 @@ func getManifest(c *gin.Context) {
 		}
 	}
 
-	bytes, err = json.Marshal(stackManifest)
-	if err != nil {
-		log.Fatal(err)
+	if c.Request.Method == http.MethodGet {
+		bytes, err = json.Marshal(stackManifest)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	c.Data(http.StatusOK, ocispec.MediaTypeImageManifest, bytes)
 }
 
 func notFoundManifest(c *gin.Context, tag string) {
-	c.JSON(http.StatusNotFound, ocitest.WriteErrors([]ocitest.ResponseError{
-		{
-			Code:    "MANIFEST_UNKNOWN",
-			Message: "manifest unknown",
-			Detail: ocitest.ResponseErrorDetails{
-				Tag: tag,
+	var data gin.H = nil
+
+	if c.Request.Method == http.MethodGet {
+		data = ocitest.WriteErrors([]ocitest.ResponseError{
+			{
+				Code:    "MANIFEST_UNKNOWN",
+				Message: "manifest unknown",
+				Detail: ocitest.ResponseErrorDetails{
+					Tag: tag,
+				},
 			},
-		},
-	}))
+		})
+	}
+
+	c.JSON(http.StatusNotFound, data)
 }
 
 func digestEntity(e interface{}) (string, error) {
@@ -878,6 +881,74 @@ func TestServeDevfileStarterProjectWithVersion(t *testing.T) {
 				if !reflect.DeepEqual(gotContentType, wantContentType) {
 					t.Errorf("Did not get expected content-type, Got: %v, Expected: %v", gotContentType, wantContentType)
 				}
+			}
+		})
+	}
+}
+
+func TestOCIServerProxy(t *testing.T) {
+	tests := []struct {
+		name      string
+		method    string
+		url       string
+		wantCode  int
+		wantError bool
+	}{
+		{
+			name:     "HEAD /v2/devfile-catalog/go/manifests/1.2.0",
+			method:   http.MethodHead,
+			url:      "/devfile-catalog/go/manifests/1.2.0",
+			wantCode: 200,
+		},
+		// TODO: Fix bug which overrides status code 200 for HEAD request despite response returning 404
+		// {
+		// 	name:      "HEAD /v2/devfile-catalog/go/manifests/notfound",
+		// 	method:    http.MethodHead,
+		// 	url:       "/devfile-catalog/go/manifests/notfound",
+		// 	wantCode:  404,
+		// 	wantError: true,
+		// },
+		{
+			name:     "GET /v2/devfile-catalog/go/manifests/1.2.0",
+			method:   http.MethodGet,
+			url:      "/devfile-catalog/go/manifests/1.2.0",
+			wantCode: 200,
+		},
+		{
+			name:      "GET /v2/devfile-catalog/go/manifests/notfound",
+			method:    http.MethodGet,
+			url:       "/devfile-catalog/go/manifests/notfound",
+			wantCode:  404,
+			wantError: true,
+		},
+	}
+
+	closeServer, err := setupMockOCIServer()
+	if err != nil {
+		t.Errorf("Did not setup mock OCI server properly: %v", err)
+		return
+	}
+	defer closeServer()
+	setupVars()
+
+	for _, test := range tests {
+		t.Run(test.name, func(tt *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			w := ocitest.NewProxyRecorder()
+			c, _ := gin.CreateTestContext(w)
+			url := fmt.Sprintf("%s://%s", scheme, filepath.Join(ociServerIP, "v2", test.url))
+
+			c.Request, err = http.NewRequest(test.method, url, bytes.NewBuffer([]byte{}))
+			if err != nil {
+				t.Fatalf("Did not expect error: %v", err)
+			}
+			c.Params = append(c.Params, gin.Param{Key: "proxyPath", Value: test.url})
+
+			ociServerProxy(c)
+
+			if gotStatusCode := w.Code; !reflect.DeepEqual(gotStatusCode, test.wantCode) {
+				t.Errorf("Did not get expected status code, Got: %v, Expected: %v", gotStatusCode, test.wantCode)
 			}
 		})
 	}
