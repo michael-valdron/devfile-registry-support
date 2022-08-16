@@ -11,7 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ResponseError repersents an error returned in an errors response by an OCI server
+// ResponseError repersents an error returned in an errors response by an OCI server,
+// see https://github.com/opencontainers/distribution-spec/blob/main/spec.md#error-codes
 type ResponseError struct {
 	Code    string                 `json:"code"`    // Error code
 	Message string                 `json:"message"` // Error Message
@@ -23,6 +24,8 @@ type ResponseError struct {
 // the devfile registry index server endpoint testing,
 // however, this entity could be used in a testing scenario
 // where an OCI server is needed.
+//
+// More on the OCI server specification, see https://github.com/opencontainers/distribution-spec/blob/main/spec.md
 type MockOCIServer struct {
 	httpserver    *httptest.Server     // Test server entity
 	router        *gin.Engine          // Router engine for route management
@@ -71,7 +74,7 @@ func (server *MockOCIServer) Start(listenAddr string) error {
 	// Testing Route for checking mock OCI server
 	server.router.GET("/v2/ping", servePing)
 
-	// Pull Routes
+	// Pull Routes, see https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pull
 	// Fetch manifest routes
 	if server.ServeManifest != nil {
 		server.router.GET("/v2/devfile-catalog/:name/manifests/:ref", server.ServeManifest)
