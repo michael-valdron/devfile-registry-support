@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	ociServerIP = "127.0.0.1:5000"
+	ociServerIP = "127.0.0.1:5000" // Mock OCI server listen address and port number, format: '<address>:<port>'
 )
 
 var (
+	// mock manifest repository for OCI server
 	manifests = map[string]map[string]ocispec.Manifest{
 		"java-maven": {
 			"1.1.0": {
@@ -121,6 +122,8 @@ var (
 	}
 )
 
+// serveManifest custom handler for fetching a manifest from the
+// mock OCI server
 func serveManifest(c *gin.Context) {
 	name, ref := c.Param("name"), c.Param("ref")
 	var (
@@ -172,6 +175,7 @@ func serveManifest(c *gin.Context) {
 	c.Data(http.StatusOK, ocispec.MediaTypeImageManifest, bytes)
 }
 
+// notFoundManifest custom handler for manifest not found status of the mock OCI server
 func notFoundManifest(c *gin.Context, tag string) {
 	var data gin.H = nil
 
@@ -180,8 +184,8 @@ func notFoundManifest(c *gin.Context, tag string) {
 			{
 				Code:    "MANIFEST_UNKNOWN",
 				Message: "manifest unknown",
-				Detail: ocitest.ResponseErrorDetails{
-					Tag: tag,
+				Detail: map[string]interface{}{
+					"Tag": tag,
 				},
 			},
 		})
@@ -190,6 +194,7 @@ func notFoundManifest(c *gin.Context, tag string) {
 	c.JSON(http.StatusNotFound, data)
 }
 
+// digestEntity generates sha256 digest of any entity type
 func digestEntity(e interface{}) (string, error) {
 	bytes, err := json.Marshal(e)
 	if err != nil {
@@ -199,6 +204,7 @@ func digestEntity(e interface{}) (string, error) {
 	return digest.FromBytes(bytes).String(), nil
 }
 
+// digestFile generates sha256 digest from file contents
 func digestFile(filepath string) (string, error) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -214,6 +220,8 @@ func digestFile(filepath string) (string, error) {
 	return dgst.String(), nil
 }
 
+// serveBlob custom handler for fetching a blob from the
+// mock OCI server
 func serveBlob(c *gin.Context) {
 	name, dgst := c.Param("name"), c.Param("digest")
 	stackRoot := filepath.Join(stacksPath, name)
@@ -266,10 +274,12 @@ func serveBlob(c *gin.Context) {
 	c.Data(http.StatusOK, http.DetectContentType(bytes), bytes)
 }
 
+// notFoundBlob custom handler for blob not found status of the mock OCI server
 func notFoundBlob(c *gin.Context) {
 	c.Data(http.StatusNotFound, "plain/text", []byte{})
 }
 
+// setupMockOCIServer sets up mock OCI server for endpoint testing environment
 func setupMockOCIServer() (func(), error) {
 	mockOCIServer := ocitest.NewMockOCIServer()
 
@@ -284,6 +294,7 @@ func setupMockOCIServer() (func(), error) {
 	return mockOCIServer.Close, nil
 }
 
+// setupVars sets up registry index server global variables for endpoint testing environment
 func setupVars() {
 	var registryPath string
 
@@ -310,6 +321,8 @@ func setupVars() {
 	}
 }
 
+// TestMockOCIServer tests if MockOCIServer is listening for
+// requests using the custom '/v2/ping' route
 func TestMockOCIServer(t *testing.T) {
 	mockOCIServer := ocitest.NewMockOCIServer()
 	if err := mockOCIServer.Start(ociServerIP); err != nil {
@@ -330,6 +343,7 @@ func TestMockOCIServer(t *testing.T) {
 	}
 }
 
+// TestServeHealthCheck tests health check endpoint '/health'
 func TestServeHealthCheck(t *testing.T) {
 	var got gin.H
 
@@ -377,6 +391,7 @@ func TestServeHealthCheck(t *testing.T) {
 	}
 }
 
+// TestServeDevfileIndexV1 tests '/index' endpoint
 func TestServeDevfileIndexV1(t *testing.T) {
 	const wantStatusCode = http.StatusOK
 
@@ -395,6 +410,7 @@ func TestServeDevfileIndexV1(t *testing.T) {
 	}
 }
 
+// TestServeDevfileIndexV1WithType tests '/index/:type' endpoint
 func TestServeDevfileIndexV1WithType(t *testing.T) {
 	setupVars()
 	tests := []struct {
@@ -451,6 +467,7 @@ func TestServeDevfileIndexV1WithType(t *testing.T) {
 	}
 }
 
+// TestServeDevfileIndexV2 tests '/v2index' endpoint
 func TestServeDevfileIndexV2(t *testing.T) {
 	const wantStatusCode = http.StatusOK
 
@@ -469,6 +486,7 @@ func TestServeDevfileIndexV2(t *testing.T) {
 	}
 }
 
+// TestServeDevfileIndexV2 tests '/v2index/:type' endpoint
 func TestServeDevfileIndexV2WithType(t *testing.T) {
 	setupVars()
 	tests := []struct {
@@ -525,6 +543,7 @@ func TestServeDevfileIndexV2WithType(t *testing.T) {
 	}
 }
 
+// TestServeDevfile tests '/devfiles/:name' endpoint
 func TestServeDevfile(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -595,6 +614,7 @@ func TestServeDevfile(t *testing.T) {
 	}
 }
 
+// TestServeDevfileWithVersion tests '/devfiles/:name/:version' endpoint
 func TestServeDevfileWithVersion(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -686,6 +706,7 @@ func TestServeDevfileWithVersion(t *testing.T) {
 	}
 }
 
+// TestServeDevfileStarterProject tests '/devfiles/:name/starter-projects/:starterProjectName' endpoint
 func TestServeDevfileStarterProject(t *testing.T) {
 	const wantContentType = "application/zip"
 	tests := []struct {
@@ -785,6 +806,7 @@ func TestServeDevfileStarterProject(t *testing.T) {
 	}
 }
 
+// TestServeDevfileStarterProjectWithVersion tests '/devfiles/:name/:version/starter-projects/:starterProjectName' endpoint
 func TestServeDevfileStarterProjectWithVersion(t *testing.T) {
 	const wantContentType = "application/zip"
 	tests := []struct {
@@ -886,6 +908,7 @@ func TestServeDevfileStarterProjectWithVersion(t *testing.T) {
 	}
 }
 
+// TestOCIServerProxy tests '/v2/*proxyPath' endpoint
 func TestOCIServerProxy(t *testing.T) {
 	tests := []struct {
 		name      string
