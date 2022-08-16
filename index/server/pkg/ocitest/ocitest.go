@@ -11,23 +11,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ResponseErrorDetails struct {
-	Tag string `json:"Tag"`
-}
-
+// ResponseError repersents an error returned in an errors response by an OCI server
 type ResponseError struct {
-	Code    string               `json:"code"`
-	Message string               `json:"message"`
-	Detail  ResponseErrorDetails `json:"detail"`
+	Code    string                 `json:"code"`    // Error code
+	Message string                 `json:"message"` // Error Message
+	Detail  map[string]interface{} `json:"detail"`  // Additional detail on the error (optional)
 }
 
+// MockOCIServer is an entity for mocking an OCI server
+// for testing. At the moment, this is only needed for
+// the devfile registry index server endpoint testing,
+// however, this entity could be used in a testing scenario
+// where an OCI server is needed.
 type MockOCIServer struct {
-	httpserver    *httptest.Server
-	router        *gin.Engine
-	ServeManifest func(c *gin.Context)
-	ServeBlob     func(c *gin.Context)
+	httpserver    *httptest.Server     // Test server entity
+	router        *gin.Engine          // Router engine for route management
+	ServeManifest func(c *gin.Context) // Handler for serving a manifest for a blob
+	ServeBlob     func(c *gin.Context) // Handler for serving a blob from the OCI server
 }
 
+// servePing is a custom handler to test if
+// MockOCIServer is listening for requests
 func servePing(c *gin.Context) {
 	data, err := json.Marshal(gin.H{
 		"message": "ok",
@@ -39,12 +43,15 @@ func servePing(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
-func WriteErrors(errors []ResponseError) gin.H {
+// WriteErrors writes error response object for OCI server
+// errors
+func WriteErrors(errors []ResponseError) map[string]interface{} {
 	return gin.H{
 		"errors": errors,
 	}
 }
 
+// NewMockOCIServer creates a MockOCIServer entity
 func NewMockOCIServer() *MockOCIServer {
 	gin.SetMode(gin.TestMode)
 
@@ -59,6 +66,7 @@ func NewMockOCIServer() *MockOCIServer {
 	return mockOCIServer
 }
 
+// Start listening on listenAddr for requests to the MockOCIServer
 func (server *MockOCIServer) Start(listenAddr string) error {
 	// Testing Route for checking mock OCI server
 	server.router.GET("/v2/ping", servePing)
@@ -89,21 +97,28 @@ func (server *MockOCIServer) Start(listenAddr string) error {
 	return nil
 }
 
+// Close the MockOCIServer connection
 func (server *MockOCIServer) Close() {
 	server.httpserver.Close()
 }
 
+// ProxyRecorder is an extension of the ResponseRecorder
+// struct within httptest with an additional receiver CloseNotifier
+// which is needed for testing the proxy route to the OCI server
 type ProxyRecorder struct {
 	*httptest.ResponseRecorder
 	http.CloseNotifier
 }
 
+// NewProxyRecorder creates a new ProxyRecorder entity
 func NewProxyRecorder() *ProxyRecorder {
 	return &ProxyRecorder{
 		ResponseRecorder: httptest.NewRecorder(),
 	}
 }
 
+// CloseNotify creates a bool channel for notifying a
+// closure of a request
 func (rec *ProxyRecorder) CloseNotify() <-chan bool {
 	return make(<-chan bool)
 }
