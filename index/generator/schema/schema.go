@@ -98,16 +98,20 @@ Sample index file:
         "resources": [
           "devfile.yaml"
         ],
-		"commandGroups": {
-		  "build": true,
-		  "run": true,
-		  "test": false,
-		  "debug": false,
-		  "deploy": false
-		},
+        "commandGroups": {
+          "build": true,
+          "run": true,
+          "test": false,
+          "debug": false,
+          "deploy": false
+        },
         "starterProjects": [
           "community",
           "redhat-product"
+        ],
+        "deploymentScope": [
+          "innerloop",
+          "outerloop"
         ]
       }
     ]
@@ -134,6 +138,7 @@ resources: []string - The file resources that compose a devfile stack.
 starterProjects: string[] - The project templates that can be used in the devfile
 git: *git - The information of remote repositories
 provider: string - The devfile provider information
+deploymentScope: []string - The deployment scopes that can be used for a stack's devfile
 versions: []Version - The list of stack versions information
 */
 
@@ -158,6 +163,7 @@ type Schema struct {
 	Git               *Git                      `yaml:"git,omitempty" json:"git,omitempty"`
 	Provider          string                    `yaml:"provider,omitempty" json:"provider,omitempty"`
 	SupportUrl        string                    `yaml:"supportUrl,omitempty" json:"supportUrl,omitempty"`
+	DeploymentScope   []string                  `yaml:"deploymentScope,omitempty" json:"deploymentScope,omitempty"`
 	Versions          []Version                 `yaml:"versions,omitempty" json:"versions,omitempty"`
 }
 
@@ -253,4 +259,5 @@ type Version struct {
 	CommandGroups   map[CommandGroupKind]bool `yaml:"commandGroups,omitempty" json:"commandGroups,omitempty"`
 	Resources       []string                  `yaml:"resources,omitempty" json:"resources,omitempty"`
 	StarterProjects []string                  `yaml:"starterProjects,omitempty" json:"starterProjects,omitempty"`
+	DeploymentScope []string                  `yaml:"deploymentScope,omitempty" json:"deploymentScope,omitempty"`
 }
