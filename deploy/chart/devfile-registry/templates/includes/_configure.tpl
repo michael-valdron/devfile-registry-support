@@ -13,18 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: "v1"
-name: "devfile-registry"
-version: "0.0.1"
-home: "https://devfile.io/"
-maintainers:
-  - email: mvaldron@redhat.com
-    name: Michael Valdron
-  - email: jcollier@redhat.com
-    name: John Collier
-  - email: tpetkos@redhat.com
-    name: Theofanis Petkos
-  - email: jdubrick@redhat.com
-    name: Jordan Dubrick
-sources:
-  - https://github.com/devfile/registry-support.git
+{{ define "devfileregistry.configure.containers" }}
+{{ if eq (include "devfileregistry.openshift.isConfigured" .) "true" }}
+{{include "devfileregistry.openshift.configure" . }}
+{{ end }}
+{{ end }}

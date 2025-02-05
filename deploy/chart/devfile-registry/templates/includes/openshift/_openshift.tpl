@@ -12,19 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-apiVersion: "v1"
-name: "devfile-registry"
-version: "0.0.1"
-home: "https://devfile.io/"
-maintainers:
-  - email: mvaldron@redhat.com
-    name: Michael Valdron
-  - email: jcollier@redhat.com
-    name: John Collier
-  - email: tpetkos@redhat.com
-    name: Theofanis Petkos
-  - email: jdubrick@redhat.com
-    name: Jordan Dubrick
-sources:
-  - https://github.com/devfile/registry-support.git
+{{- define "devfileregistry.openshift.isConfigured" -}}
+{{- and (hasKey .Values.global "isOpenShift") (.Values.global.isOpenShift) (empty .Values.global.route.domain) -}}
+{{- end -}}
