@@ -12,19 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM golang:1.21-alpine@sha256:2a1959ca3c229c72fbbee9643b88ef23d7859a7d18b60a0d94ee3d2923b49316 AS builder
+ARG BASE_IMAGE=localhost/devfile-index-base
 
-# Allows for the proper yq to be downloaded
-# This arg is automatically set if the dockerfile is built with --platform flag
+FROM registry.access.redhat.com/ubi8/go-toolset:1.21 AS builder
+
+# Set user as root
+USER root
+
+# Automatically set when --platform flag is set, will default to amd64 if no platform is given
 ARG TARGETARCH=amd64
-
-# Install dependencies
-RUN apk add --no-cache git bash curl zip
 
 # Install yq
 ENV YQ_VERSION=v4.44.1
 RUN curl -sL -O https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${TARGETARCH} -o /usr/local/bin/yq && mv ./yq_linux_${TARGETARCH} /usr/local/bin/yq && chmod +x /usr/local/bin/yq
-RUN yq
 
 # Copy the registry build tools
 COPY build-tools /build-tools
@@ -41,6 +41,9 @@ RUN bash /build-tools/dl_starter_projects.sh go-starter community
 # Run the registry build tools
 RUN bash /build-tools/build.sh /registry /build
 
-FROM devfile-index-base
+# Set user as non-root
+USER 1001
+
+FROM ${BASE_IMAGE}
 
 COPY --from=builder /build /registry
