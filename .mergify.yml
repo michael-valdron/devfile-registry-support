@@ -3,3 +3,6 @@ queue_rules:
     merge_method: merge
     update_method: rebase
     autoqueue: true
+    queue_conditions:
+      - and:
+          - author = dependabot[bot]
