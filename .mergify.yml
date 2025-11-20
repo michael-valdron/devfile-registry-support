@@ -6,3 +6,9 @@ queue_rules:
     queue_conditions:
       - and:
           - author = dependabot[bot]
+merge_protections:
+  - name: Require review from code owners
+    if:
+      - base = main
+    success_conditions:
+      - approved-reviews-by = michael-valdron
