@@ -1,1 +1,5 @@
-queue_rules: []
+queue_rules:
+  - name: Merge Queue
+    merge_method: merge
+    update_method: rebase
+    autoqueue: true
