@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    groups:
+      patch:
+        group-by: dependency-name
+        update-types:
+          - "patch"
+      update:
+        group-by: dependency-name
+        update-types:
+          - "minor"
+    directories:
+      - "/registry-library"
+      - "/index/server"
+      - "/index/generator"
+      - "/tests/integration"
+    ignore:
+      - update-types:
+          - version-update:semver-major
+        dependency-name: '*'
+      - update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+        dependency-name: go
+    exclude-paths:
+      - "**/vendor/**"
+      - "tests/registry/**"
+      - "build-tools/**"
+    schedule:
+      interval: "weekly"
+    vendor: true
+    open-pull-requests-limit: 10
